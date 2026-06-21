@@ -1,6 +1,7 @@
 model: "anthropic/claude-haiku-4-5"
 suppress_threshold: 35
 trailing_days: 14
+page_url: "https://YOUR_USERNAME.github.io/sweepreader/"
 profile_prompt: |
   Director-level engineer on US equity-options market-making infrastructure.
   Cares most about: protocol/spec changes, new venues & order types, certification

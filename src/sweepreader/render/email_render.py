@@ -71,6 +71,7 @@ def render_email(
         suppressed_count=len(suppressed),
         last_sent=last_sent,
         tier_colors=_TIER_COLORS,
+        page_url=config.page_url,
     )
 
     if dry_run:

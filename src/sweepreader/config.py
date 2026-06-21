@@ -38,6 +38,7 @@ class AppConfig:
     profile_prompt: str
     tier_weights: dict[TierLabel, float]
     sources: list[SourceConfig]
+    page_url: str = ""
 
     def config_hash(self) -> str:
         blob = json.dumps(
@@ -89,6 +90,7 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         profile_prompt=raw["profile_prompt"],
         tier_weights=tier_weights,
         sources=sources,
+        page_url=raw.get("page_url", ""),
     )
 
 
