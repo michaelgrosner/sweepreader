@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import logging
-import os
-from datetime import datetime, timezone
-from pathlib import Path
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta, timezone
 
 from sweepreader.config import load_config
 from sweepreader.ingest.base import fetch_source
@@ -15,8 +15,50 @@ from sweepreader.render import render_page
 logger = logging.getLogger(__name__)
 
 
+def _classify_item(item, existing_cls, llm, config, config_hash, dry_run, store):
+    """Classify one item, skipping if already LLM-classified. Thread-safe."""
+    if existing_cls is not None and not existing_cls.unclassified:
+        return  # already have a real LLM classification
+    if llm is None and existing_cls is not None:
+        return  # no LLM and already have any classification — keep it
+
+    cls = llm.classify(item, config) if llm is not None else keyword_fallback(item, config.model, config_hash)
+
+    if not dry_run:
+        store.append_classification(cls, force=(existing_cls is not None))
+
+
+def _run_parallel(items, existing_clss, llm, config, config_hash, dry_run, store, label):
+    total = len(items)
+    if total == 0:
+        return
+    counter = threading.local()
+    done_count = [0]
+    done_lock = threading.Lock()
+
+    logger.info("%s: %d items to classify", label, total)
+
+    with ThreadPoolExecutor(max_workers=config.classify_concurrency) as pool:
+        futures = {
+            pool.submit(_classify_item, item, existing_clss.get(item.id),
+                        llm, config, config_hash, dry_run, store): item
+            for item in items
+        }
+        for future in as_completed(futures):
+            future.result()  # re-raise any exception from the thread
+            with done_lock:
+                done_count[0] += 1
+                n = done_count[0]
+            if n % 10 == 0 or n == total:
+                logger.info("%s: %d/%d classified, %d remaining", label, n, total, total - n)
+
+
 def cmd_run(args) -> int:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
 
     config = load_config(args.config)
     store = Store()
@@ -38,51 +80,52 @@ def cmd_run(args) -> int:
     for source in config.sources:
         if not source.enabled:
             continue
-
         items, err = fetch_source(source, state)
         if err:
             failures += 1
             per_source_health[source.id] = {"status": "error", "error": str(err)}
             continue
-
         per_source_health[source.id] = {"status": "ok", "item_count": len(items)}
         all_new_items.extend(items)
         logger.info("source=%s fetched %d items", source.id, len(items))
 
-    # Cluster across all sources before persisting
     assign_clusters(all_new_items)
 
-    # Pre-load existing classifications so we can check unclassified status
     now = datetime.now(timezone.utc)
     existing_clss = store.classifications_as_of(now, config.model, config_hash)
 
     new_count = 0
     for item in all_new_items:
-        added = store.append_item(item)
-        if not added:
-            # Item already in store — check if it has a keyword-fallback classification
-            # that should be upgraded now that an LLM is available.
-            existing = existing_clss.get(item.id)
-            if existing is None or not existing.unclassified or llm is None:
-                continue
-        else:
+        if store.append_item(item):
             new_count += 1
-            existing = existing_clss.get(item.id)
-
-        # Skip if already LLM-classified
-        if existing is not None and not existing.unclassified:
-            continue
-
-        if llm is not None:
-            cls = llm.classify(item, config)
-        else:
-            cls = keyword_fallback(item, config.model, config_hash)
-
-        if not args.dry_run:
-            # force=True upgrades a keyword-fallback record with the LLM result
-            store.append_classification(cls, force=(existing is not None and existing.unclassified))
 
     logger.info("total new_items=%d", new_count)
+
+    # Classify all fetched items (new or needing upgrade from keyword fallback)
+    to_classify_fetched = [
+        item for item in all_new_items
+        if not (existing_clss.get(item.id) is not None and not existing_clss[item.id].unclassified)
+        and not (llm is None and existing_clss.get(item.id) is not None)
+    ]
+    _run_parallel(to_classify_fetched, existing_clss, llm, config, config_hash,
+                  args.dry_run, store, "classify")
+
+    # Backfill: items in the trailing window that need classification under the current
+    # hash — either no classification exists yet, or they fell back to keyword and should
+    # be upgraded now that an LLM is available. Skip items older than 6 months.
+    six_months_ago = now - timedelta(days=183)
+    fetched_ids = {item.id for item in all_new_items}
+    backfill = [
+        item for item in store.items_as_of(now, config.trailing_days)
+        if item.id not in fetched_ids
+        and item.published_at >= six_months_ago
+        and (
+            existing_clss.get(item.id) is None
+            or existing_clss[item.id].unclassified
+        )
+    ]
+    _run_parallel(backfill, existing_clss, llm, config, config_hash,
+                  args.dry_run, store, "backfill")
 
     state.set("failures_this_run", failures)
     state.set("source_health", per_source_health)

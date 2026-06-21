@@ -39,6 +39,7 @@ class AppConfig:
     tier_weights: dict[TierLabel, float]
     sources: list[SourceConfig]
     page_url: str = ""
+    classify_concurrency: int = 8
 
     def config_hash(self) -> str:
         blob = json.dumps(
@@ -91,6 +92,7 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         tier_weights=tier_weights,
         sources=sources,
         page_url=raw.get("page_url", ""),
+        classify_concurrency=int(raw.get("classify_concurrency", 8)),
     )
 
 

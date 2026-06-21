@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -27,6 +28,7 @@ class Store:
 
         self._known_item_ids: set[str] = set()
         self._known_class_keys: set[tuple[str, str, str]] = set()
+        self._cls_lock = threading.Lock()
         self._load_indexes()
 
     def _load_indexes(self) -> None:
@@ -66,17 +68,18 @@ class Store:
 
     def append_classification(self, cls: Classification, force: bool = False) -> bool:
         key = (cls.item_id, cls.model, cls.config_hash)
-        if key in self._known_class_keys and not force:
-            return False
-        # force=True: allow a newer classification to supersede an existing one.
-        # classifications_as_of() picks the latest by classified_at, so the new
-        # record wins without touching earlier records (append-only invariant preserved).
-        self._known_class_keys.discard(key)
-        shard = _shard_key(cls.classified_at)
-        path = self._class_dir / f"{shard}.jsonl"
-        with path.open("a") as f:
-            f.write(json.dumps(cls.to_dict()) + "\n")
-        self._known_class_keys.add(key)
+        with self._cls_lock:
+            if key in self._known_class_keys and not force:
+                return False
+            # force=True: allow a newer classification to supersede an existing one.
+            # classifications_as_of() picks the latest by classified_at, so the new
+            # record wins without touching earlier records (append-only invariant preserved).
+            self._known_class_keys.discard(key)
+            shard = _shard_key(cls.classified_at)
+            path = self._class_dir / f"{shard}.jsonl"
+            with path.open("a") as f:
+                f.write(json.dumps(cls.to_dict()) + "\n")
+            self._known_class_keys.add(key)
         return True
 
     def has_classification(self, item_id: str, model: str, config_hash: str) -> bool:

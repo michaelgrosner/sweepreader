@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -82,14 +83,15 @@ def _validate_response(data: dict) -> bool:
     return True
 
 
-def _extract_json(text: str) -> dict | None:
+def _extract_json(text: str | None) -> dict | None:
+    if not text:
+        return None
     text = text.strip()
-    # Try direct parse first
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-    # Try extracting JSON object from markdown code fences or surrounding text
+    # Strip markdown fences or surrounding prose and try again
     m = re.search(r'\{.*\}', text, re.DOTALL)
     if m:
         try:
@@ -150,7 +152,7 @@ class OpenRouterClient(LlmClient):
         prompt = _build_prompt(item, config, config.suppress_threshold)
         config_hash = config.config_hash()
 
-        for attempt in range(2):
+        for attempt in range(3):
             try:
                 resp = httpx.post(
                     _OPENROUTER_URL,
@@ -163,12 +165,20 @@ class OpenRouterClient(LlmClient):
                         "model": config.model,
                         "messages": [{"role": "user", "content": prompt}],
                         "temperature": 0.1,
-                        "max_tokens": 512,
+                        "max_tokens": 1024,
                     },
                     timeout=60.0,
                 )
+                if resp.status_code == 429:
+                    retry_after = float(resp.headers.get("Retry-After", 2 ** attempt))
+                    logger.warning("Rate limited; sleeping %.1fs (attempt %d)", retry_after, attempt + 1)
+                    time.sleep(retry_after)
+                    continue
                 resp.raise_for_status()
-                content = resp.json()["choices"][0]["message"]["content"]
+                content = resp.json()["choices"][0]["message"].get("content")
+                if content is None:
+                    logger.warning("LLM returned null content on attempt %d for item %s", attempt + 1, item.id)
+                    continue
                 data = _extract_json(content)
                 if data and _validate_response(data):
                     return Classification(
@@ -183,7 +193,8 @@ class OpenRouterClient(LlmClient):
                         venues=data.get("venues", [item.venue]),
                         unclassified=False,
                     )
-                logger.warning("LLM returned invalid JSON on attempt %d for item %s", attempt + 1, item.id)
+                logger.warning("LLM returned invalid JSON on attempt %d for item %s: %.120r",
+                               attempt + 1, item.id, content)
             except Exception as e:
                 logger.warning("LLM call failed on attempt %d for item %s: %s", attempt + 1, item.id, e)
 
