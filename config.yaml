@@ -171,16 +171,16 @@ sources:
     parse: nyse_notifications
     enabled: true
 
-  # BOX notices are a WordPress "circulars" post type exposed as an RSS feed.
-  # Notices are title-only (no body / no PDF); the substantive detail is in the
-  # 19b-4 circulars already covered by the Federal Register. The HTML /notices
-  # listing is Cloudflare-protected, but the feed path is not.
+  # BOX notices: scrape the /notices listing for each circular's PDF "View
+  # Document" link, then extract the PDF text (the real notice body). The listing
+  # is behind a Cloudflare header gate (browser sec-ch-ua/Sec-Fetch headers pass
+  # it); on a hard block the adapter falls back to the title-only RSS feed.
   - id: box_notices
-    modality: rss
-    endpoint: "https://boxexchange.com/?post_type=circulars&feed=rss2"
+    modality: scrape
+    endpoint: "https://boxexchange.com/notices"
     default_tier_hint: A
     weight: 0.9
-    parse: rss_generic
+    parse: box_notices
     enabled: true
 
   - id: email_miax

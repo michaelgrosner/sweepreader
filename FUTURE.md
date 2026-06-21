@@ -34,14 +34,13 @@ filename-title-only, so the classifier is blind on them.
 
 **Proposed approach** (fallback in the same `cboe.py` module):
 - Detect `.pdf` links the existing webpage-enrichment path skips.
-- Fetch and extract text with `pypdf` or `pdfminer.six` (first ~5 pages only —
-  the revision table is at the front).
+- Extract text with the shared `ingest/pdf_text.py` helper (`pdf_to_text`,
+  pypdf, already added for BOX) — first ~5 pages, where the revision table sits.
 - Parse the front-matter "Revision History" / "Change Log" table; take the
   latest entry's date and description, mirroring the webpage path.
 - Use the change-log entry as `raw_text`; fall back to the filename-derived
   title if extraction fails.
-- New dependency (`pypdf`/`pdfminer.six`) — confirm before adding, per the
-  minimal-deps stance in PLAN.md.
+- No new dependency needed — `pypdf` and `pdf_to_text` already exist.
 
 ---
 

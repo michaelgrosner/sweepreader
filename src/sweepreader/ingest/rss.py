@@ -35,7 +35,6 @@ _VENUE_FROM_SOURCE: dict[str, str] = {
     "finra_regulatory": "FINRA",
     "sec_press": "SEC",
     "memx_notices": "MEMX",
-    "box_notices": "BOX",
 }
 
 

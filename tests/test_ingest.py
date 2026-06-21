@@ -52,37 +52,6 @@ def test_rss_adapter_parses_fixture():
     assert items[0].modality == "rss"
 
 
-def test_rss_adapter_box_feed_venue_and_title_only():
-    """BOX notices are a title-only WordPress 'circulars' feed; verify the
-    box_notices source maps to venue BOX and survives empty bodies."""
-    from datetime import datetime, timezone
-    from email.utils import format_datetime
-    pub = format_datetime(datetime.now(timezone.utc))
-    xml = (
-        '<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel>'
-        "<title>Notices - BOX Exchange</title>"
-        "<item><title>Optimization of Implied Market Data Dissemination</title>"
-        "<link>https://boxexchange.com/notices/optimization-of-implied-market-data-dissemination/</link>"
-        f"<pubDate>{pub}</pubDate><description></description>"
-        "<guid>https://boxexchange.com/notices/optimization-of-implied-market-data-dissemination/</guid>"
-        "</item></channel></rss>"
-    )
-    mock_resp = MagicMock()
-    mock_resp.text = xml
-    mock_resp.raise_for_status = MagicMock()
-
-    box = SourceConfig(id="box_notices", modality="rss", parse="rss_generic",
-                       default_tier_hint="A", weight=0.9,
-                       endpoint="https://boxexchange.com/?post_type=circulars&feed=rss2")
-    with patch("sweepreader.ingest.rss.httpx.get", return_value=mock_resp):
-        items = RssAdapter(box).fetch()
-
-    assert len(items) == 1
-    assert items[0].venue == "BOX"
-    assert items[0].title == "Optimization of Implied Market Data Dissemination"
-    assert items[0].title in items[0].raw_text  # title-only body is fine
-
-
 def test_rss_adapter_stable_ids():
     xml = (FIXTURES / "cboe_rss.xml").read_text()
     mock_resp = MagicMock()
