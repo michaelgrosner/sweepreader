@@ -41,18 +41,39 @@ def cmd_backtest(args) -> int:
         llm = None
         logger.warning("No OPENROUTER_API_KEY — using keyword fallback for uncached items")
 
-    new_cls = 0
+    to_classify = []
     cached = 0
     for item in items:
         if store.has_classification(item.id, config.model, config_hash):
             cached += 1
-            continue
-        if llm is not None:
-            cls = llm.classify(item, config)
         else:
-            cls = keyword_fallback(item, config.model, config_hash)
-        store.append_classification(cls)
-        new_cls += 1
+            to_classify.append(item)
+
+    new_cls = len(to_classify)
+    if to_classify:
+        logger.info("Backtest: classifying %d items in parallel (concurrency=%d)", new_cls, config.classify_concurrency)
+        import threading
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        done_count = [0]
+        done_lock = threading.Lock()
+
+        def _classify(item):
+            if llm is not None:
+                cls = llm.classify(item, config)
+            else:
+                cls = keyword_fallback(item, config.model, config_hash)
+            store.append_classification(cls)
+
+        with ThreadPoolExecutor(max_workers=config.classify_concurrency) as pool:
+            futures = {pool.submit(_classify, item): item for item in to_classify}
+            for future in as_completed(futures):
+                future.result()
+                with done_lock:
+                    done_count[0] += 1
+                    n = done_count[0]
+                if n % 50 == 0 or n == new_cls:
+                    logger.info("Backtest progress: %d/%d classified, %d remaining", n, new_cls, new_cls - n)
 
     logger.info("Backtest: %d cached, %d newly classified", cached, new_cls)
 
