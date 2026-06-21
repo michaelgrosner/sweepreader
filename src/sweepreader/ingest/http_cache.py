@@ -60,3 +60,27 @@ class HttpCache:
         with gzip.open(path, "wt", encoding="utf-8") as f:
             f.write(text)
         return text
+
+    def fetch_bytes(self, url: str, *, params: dict | None = None,
+                    headers: dict | None = None, timeout: float = 30.0) -> bytes:
+        """Like fetch_text but for binary responses (e.g. PDFs)."""
+        path = self._path(_key(url, params) + ".bin")
+        if path.exists():
+            self.hits += 1
+            with gzip.open(path, "rb") as f:
+                return f.read()
+
+        self.misses += 1
+        resp = httpx.get(
+            url,
+            params=params,
+            headers={"User-Agent": _USER_AGENT, "Accept-Encoding": "gzip", **(headers or {})},
+            timeout=timeout,
+            follow_redirects=True,
+        )
+        resp.raise_for_status()
+        data = resp.content
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with gzip.open(path, "wb") as f:
+            f.write(data)
+        return data

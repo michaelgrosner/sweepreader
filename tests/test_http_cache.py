@@ -31,6 +31,22 @@ def test_distinct_keys_for_params(tmp_path):
     assert get.call_count == 2  # different params -> different cache entries
 
 
+def test_fetch_bytes_caches_binary(tmp_path):
+    cache = HttpCache(root=tmp_path / "http")
+    with patch("sweepreader.ingest.http_cache.httpx.get",
+               return_value=_resp_bytes(b"%PDF-1.7\x00\x01binary")) as get:
+        assert cache.fetch_bytes("https://x.test/a.pdf") == b"%PDF-1.7\x00\x01binary"
+        assert cache.fetch_bytes("https://x.test/a.pdf") == b"%PDF-1.7\x00\x01binary"
+    get.assert_called_once()  # second read served from disk, bytes intact
+
+
+def _resp_bytes(content: bytes) -> MagicMock:
+    r = MagicMock()
+    r.content = content
+    r.raise_for_status = MagicMock()
+    return r
+
+
 def test_persists_across_instances(tmp_path):
     with patch("sweepreader.ingest.http_cache.httpx.get", return_value=_resp("v")) as get:
         HttpCache(root=tmp_path / "http").fetch_text("https://x.test/a")

@@ -116,7 +116,7 @@ gh workflow run "Rebuild Page" --repo michaelgrosner/sweepreader
 gh run watch --repo michaelgrosner/sweepreader
 ```
 
-This fetches all enabled sources — Federal Register, Cboe (with revision-history enrichment), Nasdaqtrader, OCC, CAT, FINRA/SEC, MEMX, the **BOX notices scraper** (PDF circulars), the **MIAX alert scrapers**, the **NYSE Trader Updates API**, and the **IEX Trading Alerts API** — classifies new items, commits data shards, and deploys `docs/index.html` to Pages. Expect the first run to take ~2–3 minutes.
+This fetches all enabled sources — Federal Register, Cboe (with revision-history enrichment), Nasdaqtrader, OCC, CAT, FINRA/SEC, MEMX, the **BOX notices scraper** (PDF circulars), the **OPRA notices scraper** (PDF), the **MIAX alert scrapers**, the **NYSE Trader Updates API**, and the **IEX Trading Alerts API** — classifies new items, commits data shards, and deploys `docs/index.html` to Pages. Expect the first run to take ~2–3 minutes.
 
 > **BOX + Cloudflare note:** the BOX `/notices` listing is behind a Cloudflare header gate that the adapter passes with browser headers from a normal IP. GitHub Actions datacenter IPs *may* draw a stricter challenge; if so, the adapter automatically falls back to the title-only BOX RSS feed (you'll still get BOX items, just without the PDF body). Watch the `box_notices` source-health line after the first CI run.
 
@@ -183,11 +183,11 @@ gh run view <run-id> --repo michaelgrosner/sweepreader --log-failed
 **To seed history for backtesting:** the API/scrape sources expose deep history (Federal Register rule filings years back; NYSE to 2006; MIAX/IEX via paged listings/APIs). Backfill it once into the append-only store so backtests have something to score. Seeded items get `first_seen_at = published_at`, so time-travel reconstructs the past faithfully.
 ```bash
 source .env
-python -m sweepreader seed --months 6                 # all seedable sources (Federal Register + NYSE + MIAX + IEX)
+python -m sweepreader seed --months 6                 # all seedable sources (Federal Register + NYSE + MIAX + IEX + OPRA)
 python -m sweepreader seed --months 6 --source fed_register_sro   # just one source
 ```
 - No `OPENROUTER_API_KEY` needed — `seed` only fetches/stores; classification happens later in `run`/`backtest` (only uncached items cost tokens).
-- **Federal Register, NYSE, IEX** are fast (paginated JSON APIs, content inline). **MIAX** walks `?page=N` and uses *teaser-first + lazy body*: it fetches a full alert page only for items that pass a cheap keyword relevance gate (tier-E noise stays teaser-only), so a 6-month seed skips most detail fetches. Tune with `--all-bodies` (fetch everything) or `--body-min-relevance N`.
+- **Federal Register, NYSE, IEX** are fast (paginated JSON APIs, content inline). **OPRA** is a single homepage fetch (all notice history) plus one PDF per notice. **MIAX** walks `?page=N` and uses *teaser-first + lazy body*: it fetches a full alert page only for items that pass a cheap keyword relevance gate (tier-E noise stays teaser-only), so a 6-month seed skips most detail fetches. Tune with `--all-bodies` (fetch everything) or `--body-min-relevance N`.
 - Not seedable: the plain-RSS sources (OCC, CAT, Nasdaqtrader, SEC, MEMX) expose only a recent window, and BOX's listing/feed likewise (BOX filing history is in the Federal Register).
 - Responses are cached under `.cache/http` (gitignored), so a re-run or an interrupted seed resumes without re-downloading. `--no-cache` disables it.
 - After seeding locally, `git add data/ && git push` to sync the new shards into the repo.

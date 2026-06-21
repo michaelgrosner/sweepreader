@@ -13,7 +13,7 @@ from typing import Iterator
 
 from sweepreader.classify.classifier import keyword_fallback
 from sweepreader.config import load_config
-from sweepreader.ingest import nyse, miax, iex, federal_register
+from sweepreader.ingest import nyse, miax, iex, federal_register, opra
 from sweepreader.ingest.http_cache import HttpCache
 from sweepreader.store import Store
 from sweepreader.store.models import Item
@@ -40,6 +40,8 @@ def _seed_source(source, stop_before: datetime, *, cache, body_gate) -> Iterator
         yield from nyse.iter_seed_items(source.id, stop_before=stop_before, cache=cache)
     elif source.parse == "iex_alerts":
         yield from iex.iter_seed_items(source.id, stop_before=stop_before, cache=cache)
+    elif source.parse == "opra_notices":
+        yield from opra.iter_seed_items(source.id, source.endpoint, stop_before=stop_before, cache=cache)
     elif source.parse == "miax_alerts":
         yield from miax.iter_seed_items(source.id, source.endpoint, stop_before=stop_before,
                                         body_gate=body_gate, cache=cache)
@@ -60,8 +62,8 @@ def cmd_seed(args) -> int:
         wanted = set(args.source.split(","))
         sources = [s for s in config.sources if s.id in wanted or s.parse in wanted]
     else:
-        sources = [s for s in config.sources
-                   if s.parse in ("federal_register", "nyse_notifications", "miax_alerts", "iex_alerts")]
+        sources = [s for s in config.sources if s.parse in (
+            "federal_register", "nyse_notifications", "miax_alerts", "iex_alerts", "opra_notices")]
 
     logger.info("seed: %d source(s), back to %s", len(sources), stop_before.date())
     grand_new = 0

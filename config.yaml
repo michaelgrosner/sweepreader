@@ -225,6 +225,17 @@ sources:
     parse: email_html_or_pdf
     enabled: false
 
+  # OPRA notices: the opraplan.com homepage lists every notice (all years) as
+  # date + title + PDF link in one table. One fetch covers live + full history;
+  # the PDF body is extracted for classification. Feed-product / data changes.
+  - id: opra_notices
+    modality: scrape
+    endpoint: "https://www.opraplan.com/"
+    default_tier_hint: A
+    weight: 0.9
+    parse: opra_notices
+    enabled: true
+
   - id: email_24x
     modality: email
     address: "you+24x@gmail.com"
