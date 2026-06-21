@@ -16,6 +16,8 @@ the web UI.
 - Tag chips on each card; a faceted filter bar (only tags present in the current
   view, grouped by axis). Client-side filtering combines with the time-travel
   scrubber: **within an axis OR, across axes AND**; empty section headers hide.
+- Email digest renders tag chips on the top (A/B) items too (inline styles +
+  dark-mode override; the compact "Also worth a look" list stays terse).
 
 Axes: Subject (`protocol` `order-type` `connectivity` `symbology` `cert-window`
 `new-venue` `rule-filing` `fee-change` `system-status` `margin-capital`
@@ -24,7 +26,7 @@ Axes: Subject (`protocol` `order-type` `connectivity` `symbology` `cert-window`
 
 Note: existing classifications keep empty tags (config_hash unchanged, so no
 forced re-classification). Re-run/backtest under a changed config to populate
-tags on historical items. The email digest does not yet show chips.
+tags on historical items.
 
 ---
 

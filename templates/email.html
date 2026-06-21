@@ -11,6 +11,7 @@
     .text2 { color: #A0A8C0 !important; }
     .text3 { color: #5A6080 !important; }
     .accent { color: #8B83FF !important; }
+    .tagchip { background: #222535 !important; color: #A0A8C0 !important; border-color: #2D3148 !important; }
   }
 </style>
 </head>
@@ -59,6 +60,11 @@
               </div>
               {% if cls.summary %}
               <div style="font-size:13px;color:#4B5563;line-height:1.5;">{{ cls.summary }}</div>
+              {% endif %}
+              {% if cls.tags %}
+              <div style="margin-top:6px;">
+                {% for tag in cls.tags %}<span class="tagchip" style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;padding:1px 6px;border-radius:3px;background:#F1F3F7;color:#4B5563;border:1px solid #E2E6EE;margin-right:4px;display:inline-block;">{{ tag }}</span>{% endfor %}
+              </div>
               {% endif %}
             </td>
           </tr>
