@@ -75,6 +75,7 @@ def cmd_seed(args) -> int:
 
     logger.info("seed: %d source(s), back to %s", len(sources), stop_before.date())
     grand_new = 0
+    failed_sources: dict[str, str] = {}
     for source in sources:
         new = seen = 0
         try:
@@ -85,11 +86,20 @@ def cmd_seed(args) -> int:
                 if seen % 50 == 0:
                     logger.info("  %s: %d seen, %d new", source.id, seen, new)
         except Exception as e:  # per-source isolation
-            logger.error("seed: source %s failed after %d items: %s", source.id, seen, e)
+            logger.error("seed: source %s failed after %d items: %s", source.id, seen, e, exc_info=True)
+            failed_sources[source.id] = str(e)
         logger.info("seed: %s done — %d seen, %d new", source.id, seen, new)
         grand_new += new
 
     if cache is not None:
         logger.info("seed: cache %d hits / %d misses", cache.hits, cache.misses)
+
+    if failed_sources:
+        logger.error("seed: FAILED sources: %s", ", ".join(failed_sources.keys()))
+        for sid, err in failed_sources.items():
+            logger.error("  %s: %s", sid, err)
+        logger.info("seed: complete — %d new items written, but with failures", grand_new)
+        return 1
+
     logger.info("seed: complete — %d new items written", grand_new)
     return 0
