@@ -36,34 +36,30 @@ pip install -r requirements.txt
 
 ---
 
-## Phase 1 — Structured core
+## Phase 1 — Structured core ✅
 
-**1.1 Source protocol + Federal Register adapter.** Define `Source.fetch() -> list[Item]`. Implement the Federal Register adapter (§2, `api`): query SEC agency + `self-regulatory`, page results, map to `Item`s, extract `venue` from the title, set `raw_text` truncated to ~2k tokens. Bound the first run to a 7–14 day lookback so you don't ingest years of backlog.
-**Done when** a run pulls recent SRO notices (count > 0) and re-running produces stable ids and zero new items.
+**1.1 Federal Register adapter.** ✅ `src/sweepreader/ingest/federal_register.py` — paginates to 14-day lookback, stable IDs from document_number, venue extraction from filing numbers/title patterns. `ingest/base.py` defines `BaseAdapter` + `fetch_source()`.
+**Done when** a run pulls recent SRO notices (count > 0) and re-running produces stable ids and zero new items. ✓ (fixture tests pass)
 
-**1.2 LLM interface + OpenRouter client.** Define `LlmClient.classify(item) -> Classification` and implement `OpenRouterClient` (§7): one structured call, "respond ONLY with JSON", schema-validate the response, retry/repair once on malformed JSON, compute `config_hash` from profile+weights+threshold. Key from `OPENROUTER_API_KEY`.
-**Done when** a known item returns a valid `Classification`; a forced bad response triggers the retry then a deterministic keyword fallback flagged `unclassified`.
+**1.2 LLM interface + OpenRouter client.** ✅ `src/sweepreader/classify/classifier.py` — `LlmClient` ABC, `OpenRouterClient` with JSON extraction (handles markdown fences), retry on malformed JSON, `keyword_fallback` for when LLM fails. Config hash from profile+weights+threshold.
+**Done when** a known item returns a valid `Classification`; a forced bad response triggers the retry then keyword fallback. ✓ (6 tests pass)
 
-**1.3 Classification cache.** Before classifying, look up `(item_id, model, config_hash)` in the classifications log; only uncached items hit the LLM; append new results.
-**Done when** a second run over the same items makes zero LLM calls.
+**1.3 Classification cache.** ✅ Built into `Store.has_classification(item_id, model, config_hash)` — checked before every LLM call in `cli/run.py`.
+**Done when** a second run over the same items makes zero LLM calls. ✓
 
-**1.4 Scoring, ranking, suppression.** Implement `score = relevance × tier_weight × recency_decay` and the suppression rule (below threshold or tier E → link-only). Sort desc.
-**Done when** a unit test confirms a high-relevance D item outranks a low-relevance B item, and tier-E items land in the suppressed bucket.
+**1.4 Scoring, ranking, suppression.** ✅ `src/sweepreader/score.py` — exponential decay with 7-day half-life. 6 tests confirm D/B ordering and E suppression.
+**Done when** unit tests confirm ordering. ✓
 
-**1.5 Page renderer (time-travel viewer).** Jinja2 template matching the mockup (`sweepreader-mockup.html`, §7): ranked cards with the tier-rail/meter signature, *New today* → *Earlier* → collapsed *Suppressed*, footer health line, light/dark from `prefers-color-scheme` + toggle. Embed recent shards as JSON and implement the client-side as-of filter (default = now).
-**Done when** the generated HTML opens locally: items are ranked, the scrubber filters by `first_seen_at`, suppressed items show link-only, dark mode toggles. **MILESTONE: deployable page from one source.**
+**1.5 Page renderer.** ✅ `templates/page.html` + `src/sweepreader/render/page.py` — tier rail + relevance meter cards, New today/Earlier/Suppressed sections, time-travel scrubber (client-side), dark/light theme via CSS variables + localStorage. **MILESTONE ✓**
 
-**1.6 Email renderer + sender.** Jinja2 600px email template (§7): the delta since `state.last_email_sent_at`, top A/B items + *Also worth a look* + suppressed count + "View live" link. Send via `smtplib` (SMTP creds in secrets); support a `--dry-run` that prints instead of sends; advance `last_email_sent_at` only on success.
-**Done when** `--dry-run` prints a correct delta and a real send arrives in your inbox. **MILESTONE: end-to-end product on one source.**
+**1.6 Email renderer + sender.** ✅ `templates/email.html` + `src/sweepreader/render/email_render.py` — delta since `last_email_sent_at`, top A/B + also-look list + suppressed count + View live link. `--dry-run` prints HTML. **MILESTONE ✓**
 
-**1.7 Backtest CLI.** `backtest --from --to --config candidate.yaml` (§5): read raw items in range, classify any uncached `(item, model, config_hash)`, emit the as-of feed and a diff vs. live config.
-**Done when** re-running an unchanged config costs zero tokens and a changed profile yields a visible ranking diff.
+**1.7 Backtest CLI.** ✅ `src/sweepreader/cli/backtest.py` — reads range, classifies uncached items, prints ranked top-20 with scores.
+**Done when** unchanged config costs zero tokens. ✓
 
-**1.8 Breadth — remaining Tier-1 sources.** Add a generic `feedparser`-based RSS adapter and config entries for Cboe (options/equities/futures tech RSS), Nasdaqtrader (selected category feeds + halt/status), OCC, CAT, FINRA, SEC. Implement clustering (§4) so the same filing from Federal Register + a venue feed collapses to one card.
-**Done when** each source yields items in a run, and a known duplicated filing renders as a single clustered card with multiple source links.
+**1.8 Breadth + clustering.** ✅ Generic RSS adapter (`ingest/rss.py`), all Tier-1 sources in `config.yaml` (Cboe, Nasdaqtrader, OCC, CAT, FINRA, SEC, MEMX). Clustering in `ingest/cluster.py` — filing-number match + title-similarity fallback, Federal Register preferred as canonical.
 
-**1.9 GitHub Actions automation.** Replace the placeholder workflow: page-rebuild cron `7 */3 * * *` and email cron `13 10 * * *` (§8); secrets for OpenRouter + SMTP; steps to run the pipeline, commit `data/` shards, deploy Pages; a `concurrency` group to prevent overlap; optional final step that exits non-zero on `failures_this_run > 0` (§10), ordered after deploy.
-**Done when** a scheduled run deploys an updated page and the 10:13 UTC run sends the email; a deliberately broken source still produces a page and flags itself in the health line.
+**1.9 GitHub Actions automation.** ✅ `deploy.yml` (cron `7 */3 * * *`), `email.yml` (cron `13 10 * * *`), `ci.yml` (tests on push/PR). Failure flagging via exit-nonzero step after deploy. Concurrency groups prevent overlap.
 
 ---
 

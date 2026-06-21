@@ -38,7 +38,7 @@ def cmd_run(args) -> int:
         if not source.enabled:
             continue
 
-        items, err = fetch_source(source)
+        items, err = fetch_source(source, state)
         if err:
             failures += 1
             per_source_health[source.id] = {"status": "error", "error": str(err)}

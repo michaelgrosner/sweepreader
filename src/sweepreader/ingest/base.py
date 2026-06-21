@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sweepreader.config import SourceConfig
     from sweepreader.store.models import Item
+    from sweepreader.store.store import StateStore
 
 logger = logging.getLogger(__name__)
 
@@ -14,17 +15,21 @@ _USER_AGENT = "SweepReader/0.1 (contact: github.com/sweepreader)"
 
 
 class BaseAdapter(ABC):
-    def __init__(self, source: "SourceConfig"):
+    def __init__(self, source: "SourceConfig", state: "StateStore | None" = None):
         self.source = source
+        self.state = state
 
     @abstractmethod
     def fetch(self) -> list["Item"]:
         ...
 
 
-def fetch_source(source: "SourceConfig") -> tuple[list["Item"], Exception | None]:
+def fetch_source(
+    source: "SourceConfig",
+    state: "StateStore | None" = None,
+) -> tuple[list["Item"], Exception | None]:
     try:
-        adapter = _get_adapter(source)
+        adapter = _get_adapter(source, state)
         items = adapter.fetch()
         logger.info("source=%s fetched %d items", source.id, len(items))
         return items, None
@@ -33,7 +38,7 @@ def fetch_source(source: "SourceConfig") -> tuple[list["Item"], Exception | None
         return [], e
 
 
-def _get_adapter(source: "SourceConfig") -> BaseAdapter:
+def _get_adapter(source: "SourceConfig", state: "StateStore | None" = None) -> BaseAdapter:
     if source.parse == "federal_register":
         from sweepreader.ingest.federal_register import FederalRegisterAdapter
         return FederalRegisterAdapter(source)
@@ -42,6 +47,6 @@ def _get_adapter(source: "SourceConfig") -> BaseAdapter:
         return RssAdapter(source)
     elif source.parse == "email_html_or_pdf":
         from sweepreader.ingest.email_ingestor import EmailIngestor
-        return EmailIngestor(source)
+        return EmailIngestor(source, state)
     else:
         raise ValueError(f"Unknown parse strategy: {source.parse!r}")
