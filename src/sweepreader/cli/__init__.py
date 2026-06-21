@@ -26,6 +26,11 @@ def main():
     seed_parser.add_argument("--config", default="config.yaml", help="Config file path")
     seed_parser.add_argument("--months", type=float, default=6.0, help="How far back to seed (default 6)")
     seed_parser.add_argument("--source", default="", help="Comma-separated source ids/parse types (default: all seedable)")
+    seed_parser.add_argument("--no-cache", action="store_true", help="Disable the gitignored HTTP fetch cache")
+    seed_parser.add_argument("--all-bodies", action="store_true",
+                             help="Fetch every MIAX detail body (skip the relevance gate)")
+    seed_parser.add_argument("--body-min-relevance", type=int, default=0,
+                             help="MIAX: only fetch detail bodies for teasers scoring >= this (keyword gate; tier-E noise always skipped)")
 
     args = parser.parse_args()
 

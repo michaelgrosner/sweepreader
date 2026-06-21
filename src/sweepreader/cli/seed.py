@@ -11,19 +11,34 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Iterator
 
+from sweepreader.classify.classifier import keyword_fallback
 from sweepreader.config import load_config
 from sweepreader.ingest import nyse, miax
+from sweepreader.ingest.http_cache import HttpCache
 from sweepreader.store import Store
 from sweepreader.store.models import Item
 
 logger = logging.getLogger(__name__)
 
 
-def _seed_source(source, stop_before: datetime) -> Iterator[Item]:
+def _make_body_gate(config, min_relevance: int):
+    """Cheap, token-free relevance gate (keyword fallback) deciding which MIAX
+    alerts warrant a full detail-page fetch. Skips obvious noise (tier E)."""
+    model, config_hash = config.model, config.config_hash()
+
+    def gate(item: Item) -> bool:
+        cls = keyword_fallback(item, model, config_hash)
+        return cls.tier != "E" and cls.relevance >= min_relevance
+
+    return gate
+
+
+def _seed_source(source, stop_before: datetime, *, cache, body_gate) -> Iterator[Item]:
     if source.parse == "nyse_notifications":
-        yield from nyse.iter_seed_items(source.id, stop_before=stop_before)
+        yield from nyse.iter_seed_items(source.id, stop_before=stop_before, cache=cache)
     elif source.parse == "miax_alerts":
-        yield from miax.iter_seed_items(source.id, source.endpoint, stop_before=stop_before)
+        yield from miax.iter_seed_items(source.id, source.endpoint, stop_before=stop_before,
+                                        body_gate=body_gate, cache=cache)
     else:
         logger.info("seed: skipping %s (parse=%s not seedable)", source.id, source.parse)
 
@@ -34,6 +49,8 @@ def cmd_seed(args) -> int:
     config = load_config(args.config)
     store = Store()
     stop_before = datetime.now(timezone.utc) - timedelta(days=round(args.months * 30.44))
+    cache = None if args.no_cache else HttpCache()
+    body_gate = None if args.all_bodies else _make_body_gate(config, args.body_min_relevance)
 
     if args.source:
         wanted = set(args.source.split(","))
@@ -46,7 +63,7 @@ def cmd_seed(args) -> int:
     for source in sources:
         new = seen = 0
         try:
-            for item in _seed_source(source, stop_before):
+            for item in _seed_source(source, stop_before, cache=cache, body_gate=body_gate):
                 seen += 1
                 if store.append_item(item):
                     new += 1
@@ -57,5 +74,7 @@ def cmd_seed(args) -> int:
         logger.info("seed: %s done — %d seen, %d new", source.id, seen, new)
         grand_new += new
 
+    if cache is not None:
+        logger.info("seed: cache %d hits / %d misses", cache.hits, cache.misses)
     logger.info("seed: complete — %d new items written", grand_new)
     return 0

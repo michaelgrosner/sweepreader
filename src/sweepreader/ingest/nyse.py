@@ -15,6 +15,7 @@ no per-item detail fetch is needed. ~18.5k records reach back to 2006, which the
 """
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Iterator
@@ -76,33 +77,33 @@ def notification_to_item(notification: dict, source_id: str, *, first_seen_at: d
 
 
 def fetch_page(page: int, *, system_id: int = _SYSTEM_ID, page_size: int = _PAGE_SIZE,
-               timeout: float = 30.0) -> tuple[list[dict], int]:
+               timeout: float = 30.0, cache=None) -> tuple[list[dict], int]:
     """One page of notifications, newest first. Returns (records, total_count)."""
     url = _BASE + _LIST_PATH.format(sid=system_id)
-    resp = httpx.get(
-        url,
-        params={
-            "pageSize": page_size,
-            "pageNumber": page,
-            "sortKey": "publishedDate",
-            "sortOrder": "desc",
-        },
-        headers={"User-Agent": _USER_AGENT, "Accept": "application/json", "Accept-Encoding": "gzip"},
-        timeout=timeout,
-        follow_redirects=True,
-    )
-    resp.raise_for_status()
-    payload = resp.json()
+    params = {
+        "pageSize": page_size,
+        "pageNumber": page,
+        "sortKey": "publishedDate",
+        "sortOrder": "desc",
+    }
+    headers = {"User-Agent": _USER_AGENT, "Accept": "application/json", "Accept-Encoding": "gzip"}
+    if cache is not None:
+        payload = json.loads(cache.fetch_text(url, params=params, headers=headers, timeout=timeout))
+    else:
+        resp = httpx.get(url, params=params, headers=headers, timeout=timeout, follow_redirects=True)
+        resp.raise_for_status()
+        payload = resp.json()
     return payload.get("data", []), int(payload.get("totalCount", 0))
 
 
 def iter_notifications(*, stop_before: datetime | None = None, max_pages: int | None = None,
-                       system_id: int = _SYSTEM_ID, page_size: int = _PAGE_SIZE) -> Iterator[dict]:
+                       system_id: int = _SYSTEM_ID, page_size: int = _PAGE_SIZE,
+                       cache=None) -> Iterator[dict]:
     """Yield notifications newest-first, stopping once `publishedDate` predates
     `stop_before` or `max_pages` is reached (whichever comes first)."""
     page = 0
     while max_pages is None or page < max_pages:
-        records, total = fetch_page(page, system_id=system_id, page_size=page_size)
+        records, total = fetch_page(page, system_id=system_id, page_size=page_size, cache=cache)
         if not records:
             return
         for n in records:
@@ -114,10 +115,11 @@ def iter_notifications(*, stop_before: datetime | None = None, max_pages: int | 
         page += 1
 
 
-def iter_seed_items(source_id: str, *, stop_before: datetime) -> Iterator[Item]:
+def iter_seed_items(source_id: str, *, stop_before: datetime, cache=None) -> Iterator[Item]:
     """Page the full history back to `stop_before`, yielding items whose
-    first_seen = published date (historical reconstruction for backtesting)."""
-    for n in iter_notifications(stop_before=stop_before):
+    first_seen = published date (historical reconstruction for backtesting).
+    Bodies arrive inline, so no relevance gate is needed (unlike MIAX)."""
+    for n in iter_notifications(stop_before=stop_before, cache=cache):
         yield notification_to_item(n, source_id, first_seen_at=_published_at(n))
 
 

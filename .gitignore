@@ -16,3 +16,4 @@ build/
 *.log
 .DS_Store
 data/state.json
+.cache/

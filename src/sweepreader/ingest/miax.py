@@ -20,7 +20,7 @@ import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
-from typing import Iterator
+from typing import Callable, Iterator
 
 import httpx
 from selectolax.parser import HTMLParser, Node
@@ -43,6 +43,7 @@ class ParsedAlert:
     title: str
     venue: str
     alert_types: str
+    teaser: str  # listing summary; cheap stand-in body when no detail is fetched
 
 
 def _text(node: Node, selector: str) -> str:
@@ -65,6 +66,7 @@ def _parse_article(art: Node) -> ParsedAlert | None:
         title=_text(art, ".heading-text") or _title_from_path(path),
         venue=_text(art, ".alert-exchange-type-items") or "MIAX",
         alert_types=_text(art, ".alert-type-items"),
+        teaser=_text(art, ".field--name-body, .teaser, p"),
     )
 
 
@@ -84,7 +86,9 @@ def _build_item(source_id: str, alert: ParsedAlert, body: str, first_seen_at: da
     )
 
 
-def _get(url: str, timeout: float = 30.0) -> str:
+def _get(url: str, timeout: float = 30.0, cache=None) -> str:
+    if cache is not None:
+        return cache.fetch_text(url, timeout=timeout)
     resp = httpx.get(
         url,
         headers={"User-Agent": _USER_AGENT, "Accept-Encoding": "gzip"},
@@ -95,9 +99,9 @@ def _get(url: str, timeout: float = 30.0) -> str:
     return resp.text
 
 
-def _detail_body(url: str) -> str:
+def _detail_body(url: str, cache=None) -> str:
     try:
-        tree = HTMLParser(_get(url))
+        tree = HTMLParser(_get(url, cache=cache))
         art = tree.css_first("article.node--view-mode-full")
         return html_to_text(art.html if art else tree.html)
     except Exception as e:  # per-item isolation (SPEC §10)
@@ -116,13 +120,19 @@ def _parse_listing(html: str) -> list[ParsedAlert]:
 
 
 def iter_seed_items(source_id: str, endpoint: str, *, stop_before: datetime,
+                    body_gate: Callable[[Item], bool] | None = None, cache=None,
                     max_pages: int = 400, sleep: float = 0.3) -> Iterator[Item]:
     """Walk listing pages newest-first, yielding items (first_seen = published)
-    until alerts predate `stop_before`. Used by the seed CLI for backtesting."""
+    until alerts predate `stop_before`. Used by the seed CLI for backtesting.
+
+    Teaser-first + lazy body: each item starts from the cheap listing teaser; a
+    full detail page is fetched only when `body_gate` accepts the teaser item
+    (None = always fetch). This avoids a detail request per noise alert over a
+    multi-month seed."""
     seen: set[str] = set()
     for page in range(max_pages):
         sep = "&" if "?" in endpoint else "?"
-        alerts = _parse_listing(_get(f"{endpoint}{sep}page={page}"))
+        alerts = _parse_listing(_get(f"{endpoint}{sep}page={page}", cache=cache))
         if not alerts:
             return
         new_on_page = 0
@@ -133,7 +143,11 @@ def iter_seed_items(source_id: str, endpoint: str, *, stop_before: datetime,
             if alert.published_at < stop_before:
                 continue
             new_on_page += 1
-            yield _build_item(source_id, alert, _detail_body(alert.url), alert.published_at)
+            item = _build_item(source_id, alert, alert.teaser, alert.published_at)
+            if body_gate is None or body_gate(item):
+                item = _build_item(source_id, alert, _detail_body(alert.url, cache=cache),
+                                   alert.published_at)
+            yield item
         # Pages are newest-first; once an entire page is older than the cutoff, stop.
         if page > 0 and new_on_page == 0 and all(a.published_at < stop_before for a in alerts):
             return

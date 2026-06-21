@@ -74,3 +74,43 @@ def test_miax_seed_pages_until_cutoff_and_dates_from_path():
     assert all(it.first_seen_at == it.published_at for it in items)
     assert all("Full body text." in it.raw_text for it in items)
     assert all(it.modality == "scrape" for it in items)
+
+
+def test_miax_seed_body_gate_skips_noise_detail_fetch():
+    today = datetime.now(timezone.utc)
+    d = lambda days: (today - timedelta(days=days)).strftime("/alert/%Y/%m/%d/slug-")
+    page0 = _listing(
+        _teaser(d(1) + "spec", title="Specification update for protocol"),  # relevant -> body
+        _teaser(d(2) + "halt", title="Trading halt corporate action"),      # tier E -> teaser-only
+    )
+    detail_calls: list[str] = []
+
+    def fake_get(url, *a, **k):
+        r = MagicMock(); r.raise_for_status = MagicMock()
+        if "page=0" in url:
+            r.text = page0
+        elif "page=" in url:
+            r.text = _listing()  # empty subsequent pages
+        else:
+            detail_calls.append(url)
+            r.text = _DETAIL
+        return r
+
+    # Gate mirrors the CLI: skip detail for tier-E keyword matches.
+    def gate(item):
+        from sweepreader.classify.classifier import keyword_fallback
+        return keyword_fallback(item, "m", "h").tier != "E"
+
+    cutoff = today - timedelta(days=14)
+    with patch.object(miax.httpx, "get", side_effect=fake_get), \
+         patch.object(miax.time, "sleep", lambda *_: None):
+        items = list(miax.iter_seed_items(
+            "miax_options", "https://www.miaxglobal.com/markets/x/alerts",
+            stop_before=cutoff, body_gate=gate))
+
+    assert len(items) == 2
+    assert len(detail_calls) == 1  # only the relevant alert triggered a detail fetch
+    spec = next(i for i in items if "Specification" in i.title)
+    halt = next(i for i in items if "halt" in i.title)
+    assert "Full body text." in spec.raw_text       # body fetched
+    assert "Full body text." not in halt.raw_text   # teaser-only
