@@ -309,6 +309,17 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   font-size: 0.6rem;
   color: var(--text3);
 }
+.item-id {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text3);
+  cursor: pointer;
+  user-select: none;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.item-id:hover { opacity: 1; color: var(--accent); }
+.item-id.copied { color: #22c55e; opacity: 1; }
 
 /* Suppressed list */
 .suppressed-toggle {
@@ -465,7 +476,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
       <div class="card-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></div>
       {% if cls.summary %}<div class="card-summary">{{ cls.summary }}</div>{% endif %}
       <div class="card-footer-row">
-        <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }}</div>
+        <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }} <span class="item-id" data-id="{{ item.id }}" title="Click to copy ID">{{ item.id[:8] }}</span></div>
         <div class="feedback-btns">
           <button class="fb-btn" data-item="{{ item.id }}" data-signal="up" title="Relevant" aria-label="Mark relevant">↑</button>
           <button class="fb-btn" data-item="{{ item.id }}" data-signal="down" title="Not relevant" aria-label="Mark not relevant">↓</button>
@@ -526,6 +537,17 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     const t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', t);
     try { localStorage.setItem('sr-theme', t); } catch(e) {}
+  });
+
+  // Item ID copy-to-clipboard
+  document.querySelectorAll('.item-id').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var id = el.getAttribute('data-id');
+      try { navigator.clipboard.writeText(id); } catch(e) {}
+      el.textContent = '✓';
+      el.classList.add('copied');
+      setTimeout(function() { el.textContent = id.slice(0,8); el.classList.remove('copied'); }, 1200);
+    });
   });
 
   // Time-travel scrubber

@@ -20,6 +20,21 @@ Apply a structured tag set to each item alongside tier/relevance. The LLM would 
 
 ---
 
+## CBOE RSS PDF extraction
+
+CBOE technical RSS feeds link almost entirely to PDFs (spec sheets, BOE protocol docs, etc.) rather than web pages. The current classifier only sees the filename as the title and no body text, making classification nearly blind.
+
+**Proposed approach:**
+- In `RssAdapter.fetch()`, detect PDF links (`.pdf` extension)
+- Fetch and extract text with `pypdf` or `pdfminer.six` (first ~5 pages only — release notes are always at the front)
+- Look for a "Revision History" or "Change Log" table; extract the latest entry date and description
+- Use the extracted date as `published_at` and the change-log entry as `raw_text` for classification
+- Fall back to filename-derived title if extraction fails
+
+This would also fix the date problem (CBOE PDFs have no `<pubDate>` in the RSS, only a file modification timestamp).
+
+---
+
 ## Feedback / voting
 
 Up/down buttons currently write to `data/feedback/YYYY-MM.jsonl` but the data is never read back. Options:

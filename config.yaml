@@ -9,6 +9,16 @@ profile_prompt: |
   windows, feed-product changes, connectivity. Interested in market-structure
   direction. Bored by routine fee filings, halts, corporate actions, M&A.
 
+  Market scope — US ONLY. Non-US venues (CBOE Canada, CBOE Europe, CBOE UK,
+  Cboe Australia, Euronext, LSE, TSX, etc.) are irrelevant → always tier E.
+
+  Venue priority within US markets:
+    Highest — US options exchanges: Cboe (BZX/C2/EDGX), Nasdaq ISE/PHLX/MRX/GEMX/BX,
+      MIAX/Pearl/Emerald, BOX, NYSE American Options, NYSE Arca Options, MEMX Options.
+    Medium  — US equity-only venues: NYSE, Nasdaq, MEMX, IEX, LTSE, MIAX Pearl Equities.
+    Lower   — US futures/index venues: CFE, CME, ICE Futures US.
+    Ignore  — international indices, foreign sovereign bonds, crypto.
+
 tier_weights:
   A: 1.00
   B: 0.85
