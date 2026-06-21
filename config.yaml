@@ -1,0 +1,168 @@
+model: "anthropic/claude-haiku-4-5"
+suppress_threshold: 35
+trailing_days: 14
+profile_prompt: |
+  Director-level engineer on US equity-options market-making infrastructure.
+  Cares most about: protocol/spec changes, new venues & order types, certification
+  windows, feed-product changes, connectivity. Interested in market-structure
+  direction. Bored by routine fee filings, halts, corporate actions, M&A.
+
+tier_weights:
+  A: 1.00
+  B: 0.85
+  C: 0.55
+  D: 0.40
+  E: 0.10
+
+sources:
+  - id: fed_register_sro
+    modality: api
+    endpoint: "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bagencies%5D%5B%5D=securities-and-exchange-commission&conditions%5Bterm%5D=self-regulatory&per_page=40&order=newest"
+    default_tier_hint: D
+    weight: 1.0
+    parse: federal_register
+    enabled: true
+
+  - id: cboe_options_tech
+    modality: rss
+    endpoint: "https://www.cboe.com/us/options/support/technical/rss"
+    default_tier_hint: A
+    weight: 1.0
+    parse: rss_generic
+    enabled: true
+
+  - id: cboe_equities_tech
+    modality: rss
+    endpoint: "https://www.cboe.com/us/equities/support/technical/rss"
+    default_tier_hint: A
+    weight: 1.0
+    parse: rss_generic
+    enabled: true
+
+  - id: cboe_futures_tech
+    modality: rss
+    endpoint: "https://www.cboe.com/us/futures/support/technical/rss"
+    default_tier_hint: B
+    weight: 0.9
+    parse: rss_generic
+    enabled: true
+
+  - id: nasdaqtrader_options_tech
+    modality: rss
+    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=optionsTechnicalAlerts"
+    default_tier_hint: A
+    weight: 1.0
+    parse: rss_generic
+    enabled: true
+
+  - id: nasdaqtrader_options_reg
+    modality: rss
+    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=optionsRegulatoryAlerts"
+    default_tier_hint: B
+    weight: 1.0
+    parse: rss_generic
+    enabled: true
+
+  - id: nasdaqtrader_equity_tech
+    modality: rss
+    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=equityTechnicalUpdates"
+    default_tier_hint: A
+    weight: 0.9
+    parse: rss_generic
+    enabled: true
+
+  - id: nasdaqtrader_data_tech
+    modality: rss
+    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=dataTechnicalNews"
+    default_tier_hint: A
+    weight: 0.95
+    parse: rss_generic
+    enabled: true
+
+  - id: nasdaqtrader_halt
+    modality: rss
+    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=tradehalts"
+    default_tier_hint: E
+    weight: 0.5
+    parse: rss_generic
+    enabled: true
+
+  - id: occ_alerts
+    modality: rss
+    endpoint: "https://infomemo.theocc.com/infomemos?format=rss"
+    default_tier_hint: A
+    weight: 1.0
+    parse: rss_generic
+    enabled: true
+
+  - id: cat_nms
+    modality: rss
+    endpoint: "https://www.catnmsplan.com/rss/topics.xml"
+    default_tier_hint: B
+    weight: 0.9
+    parse: rss_generic
+    enabled: true
+
+  - id: finra_regulatory
+    modality: rss
+    endpoint: "https://www.finra.org/rules-guidance/notices/rss"
+    default_tier_hint: B
+    weight: 0.85
+    parse: rss_generic
+    enabled: true
+
+  - id: sec_press
+    modality: rss
+    endpoint: "https://www.sec.gov/rss/news/press-releases.rss"
+    default_tier_hint: B
+    weight: 0.85
+    parse: rss_generic
+    enabled: true
+
+  - id: memx_notices
+    modality: rss
+    endpoint: "https://info.memxtrading.com/category/alerts-notices/feed/"
+    default_tier_hint: A
+    weight: 1.0
+    parse: rss_generic
+    enabled: true
+
+  - id: email_miax
+    modality: email
+    address: "you+miax@gmail.com"
+    default_tier_hint: A
+    weight: 0.95
+    parse: email_html_or_pdf
+    enabled: false
+
+  - id: email_nyse
+    modality: email
+    address: "you+nyse@gmail.com"
+    default_tier_hint: A
+    weight: 0.95
+    parse: email_html_or_pdf
+    enabled: false
+
+  - id: email_box
+    modality: email
+    address: "you+box@gmail.com"
+    default_tier_hint: A
+    weight: 0.9
+    parse: email_html_or_pdf
+    enabled: false
+
+  - id: email_iex
+    modality: email
+    address: "you+iex@gmail.com"
+    default_tier_hint: A
+    weight: 0.9
+    parse: email_html_or_pdf
+    enabled: false
+
+  - id: email_24x
+    modality: email
+    address: "you+24x@gmail.com"
+    default_tier_hint: B
+    weight: 0.85
+    parse: email_html_or_pdf
+    enabled: false
