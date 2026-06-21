@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Cboe Options Technical Updates</title>
+    <link>https://www.cboe.com/us/options/support/technical/</link>
+    <description>Technical specification updates from Cboe Options</description>
+    <item>
+      <title>Cboe Options Exchange: C2 System Specification Update v3.14</title>
+      <link>https://www.cboe.com/us/options/support/technical/spec-update-c2-3-14</link>
+      <description>C2 will update the multicast top-of-book feed to add a new message type for complex order book changes effective 2026-07-01. Member firms should update parsers accordingly.</description>
+      <pubDate>Fri, 20 Jun 2026 10:00:00 +0000</pubDate>
+      <guid>https://www.cboe.com/us/options/support/technical/spec-update-c2-3-14</guid>
+    </item>
+    <item>
+      <title>Cboe BZX Options: Connectivity Window Scheduled for 2026-07-15</title>
+      <link>https://www.cboe.com/us/options/support/technical/connectivity-bzx-2026-07</link>
+      <description>Cboe BZX Options will host a connectivity test window on July 15, 2026 from 8:00am to 11:00am ET. Firms connecting via FIX should test session negotiation.</description>
+      <pubDate>Thu, 19 Jun 2026 14:30:00 +0000</pubDate>
+      <guid>https://www.cboe.com/us/options/support/technical/connectivity-bzx-2026-07</guid>
+    </item>
+  </channel>
+</rss>

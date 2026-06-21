@@ -1,0 +1,25 @@
+{
+  "count": 2,
+  "results": [
+    {
+      "document_number": "2026-13245",
+      "title": "Self-Regulatory Organizations; MEMX LLC; Notice of Filing of Proposed Rule Change to Adopt New Order Type",
+      "html_url": "https://www.federalregister.gov/documents/2026/06/20/2026-13245/srorg-memx",
+      "publication_date": "2026-06-20",
+      "abstract": "MEMX LLC filed a proposed rule change to adopt a new order type called a Mid-Point Peg order which will rest at the midpoint of the NBBO.",
+      "full_text_xml_url": "https://www.federalregister.gov/documents/full_text/xml/2026/06/20/2026-13245.xml",
+      "agencies": [{"name": "Securities and Exchange Commission"}],
+      "docket_ids": ["SR-MEMX-2026-15"]
+    },
+    {
+      "document_number": "2026-13100",
+      "title": "Self-Regulatory Organizations; Cboe Exchange, Inc.; Order Granting Approval of Proposed Rule Change Relating to Market Maker Quoting Obligations",
+      "html_url": "https://www.federalregister.gov/documents/2026/06/18/2026-13100/srorg-cboe",
+      "publication_date": "2026-06-18",
+      "abstract": "The SEC is granting approval of Cboe's proposed rule change to modify market maker minimum quoting size requirements in listed options.",
+      "full_text_xml_url": null,
+      "agencies": [{"name": "Securities and Exchange Commission"}],
+      "docket_ids": ["SR-CBOE-2026-22"]
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SweepReader · {{ now.strftime("%Y-%m-%d") }}</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    body { background: #0F1117 !important; color: #F0F2F8 !important; }
+    .surface { background: #1A1D27 !important; border-color: #2D3148 !important; }
+    .text2 { color: #A0A8C0 !important; }
+    .text3 { color: #5A6080 !important; }
+    .accent { color: #8B83FF !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#F8F9FB;font-family:'Inter',Helvetica,Arial,sans-serif;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+  <tr><td align="center" style="padding:24px 16px;">
+    <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;width:100%;">
+
+      <!-- Header -->
+      <tr><td class="surface" style="background:#FFFFFF;border:1px solid #E2E6EE;border-radius:8px 8px 0 0;padding:20px 24px;border-bottom:none;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td>
+            <div style="font-family:'Space Grotesk',Helvetica,sans-serif;font-weight:700;font-size:18px;letter-spacing:-0.02em;color:#111827;">
+              Sweep<span style="color:#4F46E5;">Reader</span>
+            </div>
+            <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:10px;color:#9CA3AF;margin-top:2px;">
+              {{ now.strftime("%Y-%m-%d · %H:%M UTC") }}
+            </div>
+          </td>
+        </tr></table>
+      </td></tr>
+
+      {% if top_items %}
+      <!-- Top items -->
+      <tr><td class="surface" style="background:#FFFFFF;border:1px solid #E2E6EE;border-top:none;border-bottom:none;padding:0 24px;">
+        <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#9CA3AF;padding:16px 0 10px;border-bottom:1px solid #E2E6EE;">New since last digest</div>
+        {% for item, cls, score in top_items %}
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;border-bottom:1px solid #F1F3F7;">
+          <tr>
+            <td width="36" valign="top" style="padding-right:12px;padding-bottom:12px;">
+              <div style="text-align:center;">
+                <div style="font-family:'IBM Plex Mono',Courier,monospace;font-weight:500;font-size:13px;color:{{ cls.tier | tier_color }};">{{ cls.tier }}</div>
+                <div style="width:4px;height:40px;background:#E2E6EE;border-radius:2px;margin:4px auto;position:relative;overflow:hidden;">
+                  <div style="position:absolute;bottom:0;left:0;right:0;height:{{ cls.relevance }}%;background:{{ cls.tier | tier_color }};opacity:0.75;border-radius:2px;"></div>
+                </div>
+                <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#9CA3AF;">{{ cls.relevance }}</div>
+              </div>
+            </td>
+            <td valign="top" style="padding-bottom:12px;">
+              <div style="margin-bottom:4px;">
+                <span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;font-weight:500;letter-spacing:0.06em;padding:1px 5px;border-radius:3px;background:#EEF2FF;color:#4F46E5;text-transform:uppercase;">{{ item.venue }}</span>
+                <span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#9CA3AF;margin-left:6px;">{{ item.published_at.strftime("%Y-%m-%d") }}</span>
+              </div>
+              <div style="font-weight:600;font-size:14px;line-height:1.4;margin-bottom:5px;">
+                <a href="{{ item.url }}" style="color:#111827;text-decoration:none;">{{ item.title }}</a>
+              </div>
+              {% if cls.summary %}
+              <div style="font-size:13px;color:#4B5563;line-height:1.5;">{{ cls.summary }}</div>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+        {% endfor %}
+      </td></tr>
+      {% endif %}
+
+      {% if also_items %}
+      <!-- Also worth a look -->
+      <tr><td class="surface" style="background:#FFFFFF;border:1px solid #E2E6EE;border-top:none;border-bottom:none;padding:0 24px;">
+        <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#9CA3AF;padding:14px 0 8px;border-bottom:1px solid #E2E6EE;">Also worth a look</div>
+        {% for item, cls, score in also_items %}
+        <div style="padding:8px 0;border-bottom:1px solid #F1F3F7;display:flex;gap:8px;align-items:baseline;">
+          <span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#9CA3AF;min-width:48px;text-transform:uppercase;">{{ item.venue }}</span>
+          <span style="font-size:13px;color:#4B5563;"><a href="{{ item.url }}" style="color:#4B5563;text-decoration:none;">{{ item.title }}</a></span>
+        </div>
+        {% endfor %}
+      </td></tr>
+      {% endif %}
+
+      <!-- Footer -->
+      <tr><td class="surface" style="background:#F8F9FB;border:1px solid #E2E6EE;border-top:1px solid #E2E6EE;border-radius:0 0 8px 8px;padding:16px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td>
+            <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:10px;color:#9CA3AF;">
+              {% if suppressed_count > 0 %}{{ suppressed_count }} suppressed item{% if suppressed_count != 1 %}s{% endif %} not shown · {% endif %}
+              <a href="{{ page_url | default('https://your-site.github.io/sweepreader/', true) }}" style="color:#4F46E5;text-decoration:none;">View live →</a>
+            </div>
+          </td>
+        </tr></table>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

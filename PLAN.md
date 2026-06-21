@@ -20,19 +20,19 @@ pip install -r requirements.txt
 
 ---
 
-## Phase 0 — Scaffold and contracts
+## Phase 0 — Scaffold and contracts ✅
 
-**0.1 Repo and layout.** Create the repo and structure: `src/sweepreader/{ingest,classify,render,store,cli}.py`, `config.yaml`, `data/`, `tests/`, `templates/`, `.github/workflows/`. Pin Python 3.12. Add `requirements.txt` and a `__main__.py` entry.
-**Done when** `python -m sweepreader --help` lists subcommands (`run`, `email`, `backtest`).
+**0.1 Repo and layout.** ✅ `src/sweepreader/{ingest,classify,render,store,cli}/`, `config.yaml`, `data/`, `tests/`, `.github/workflows/`, `pyproject.toml`. Python 3.13 (3.12 unavailable on dev machine — divergence from spec; CI will use 3.12 on ubuntu-latest).
+**Done when** `python -m sweepreader --help` lists subcommands (`run`, `email`, `backtest`). ✓
 
-**0.2 Config loader.** Parse `config.yaml` (§3) into typed objects (dataclasses). Validate: tier weights present for A–E, threshold in range, every source has `id`/`modality`/`parse`, ids unique. Fail loudly with a precise message on bad config.
-**Done when** a malformed config raises a clear error and the sample config loads into objects.
+**0.2 Config loader.** ✅ `src/sweepreader/config.py` — `AppConfig`/`SourceConfig` dataclasses, YAML validation with clear error messages, `config_hash()` for classification versioning.
+**Done when** a malformed config raises a clear error and the sample config loads into objects. ✓ (7 tests pass)
 
-**0.3 Data model and store.** Implement `Item` and `Classification` (§4) and the append-only store (§5): month-sharded JSONL append (never rewrite a closed shard), read-all-since(`T`), and `state.json` load/save. Stable `Item.id` hashing and dedup-on-append.
-**Done when** a unit test appends items twice and the second append adds zero duplicates and does not touch the prior month's shard.
+**0.3 Data model and store.** ✅ `src/sweepreader/store/models.py` (`Item`, `Classification`), `src/sweepreader/store/store.py` (`Store`, `StateStore`). Month-sharded JSONL, dedup-on-append, raw_text capped at 8000 chars (~2k tokens).
+**Done when** a unit test appends items twice and the second append adds zero duplicates and does not touch the prior month's shard. ✓ (7 tests pass)
 
-**0.4 (De-risk infra early) Hello-world deploy.** Wire a minimal Actions workflow that publishes a static placeholder page to GitHub Pages using one dummy secret. This proves the runner → Pages → secrets path before any logic depends on it.
-**Done when** a manually-dispatched workflow publishes a live Pages URL.
+**0.4 Hello-world deploy.** ✅ `.github/workflows/deploy.yml` (page rebuild + Pages deploy) and `.github/workflows/email.yml` (10:13 UTC cron). Placeholder `docs/index.html` committed.
+**Done when** a manually-dispatched workflow publishes a live Pages URL. ⚠️ *Requires repo to be pushed to GitHub and Pages enabled — not verifiable locally.*
 
 ---
 

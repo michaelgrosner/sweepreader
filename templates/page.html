@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SweepReader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F8F9FB;
+  --surface: #FFFFFF;
+  --surface2: #F1F3F7;
+  --border: #E2E6EE;
+  --text: #111827;
+  --text2: #4B5563;
+  --text3: #9CA3AF;
+  --accent: #4F46E5;
+  --accent-dim: #EEF2FF;
+  --tier-a: #4F46E5;
+  --tier-b: #3B82F6;
+  --tier-c: #14B8A6;
+  --tier-d: #F59E0B;
+  --tier-e: #9CA3AF;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Inter', sans-serif;
+  --display: 'Space Grotesk', sans-serif;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+}
+[data-theme="dark"] {
+  --bg: #0F1117;
+  --surface: #1A1D27;
+  --surface2: #222535;
+  --border: #2D3148;
+  --text: #F0F2F8;
+  --text2: #A0A8C0;
+  --text3: #5A6080;
+  --accent: #8B83FF;
+  --accent-dim: #1E1C3A;
+  --tier-a: #8B83FF;
+  --tier-b: #60A5FA;
+  --tier-c: #2DD4BF;
+  --tier-d: #FBBF24;
+  --tier-e: #6B7280;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 15px; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+/* Header */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+}
+.header-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 52px;
+}
+.wordmark {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+.wordmark span { color: var(--accent); }
+.coverage-strip {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--text3);
+  letter-spacing: 0.04em;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.health-pill {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+}
+.health-pill.error { border-color: #EF4444; color: #EF4444; background: #FEF2F2; }
+[data-theme="dark"] .health-pill.error { background: #2D1515; }
+.theme-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: var(--text2);
+}
+.theme-btn:hover { border-color: var(--accent); }
+.theme-btn:focus-visible { outline: 2px solid var(--accent); }
+
+/* Time-travel scrubber */
+.scrubber-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 24px;
+}
+.scrubber-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.scrubber-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+#scrubber-input {
+  flex: 1;
+  max-width: 280px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  outline: none;
+}
+#scrubber-input:focus { border-color: var(--accent); }
+.scrubber-now-btn {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.scrubber-now-btn:hover { opacity: 0.85; }
+
+/* Main content */
+.main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+}
+
+/* Section headers */
+.section-header {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin: 28px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.section-header:first-of-type { margin-top: 0; }
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 10px;
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+  transition: border-color 0.1s;
+}
+.card:hover { border-color: var(--accent); }
+
+/* Tier rail */
+.tier-rail {
+  width: 44px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 0 10px;
+  gap: 6px;
+  border-right: 1px solid var(--border);
+  background: var(--surface2);
+}
+.tier-letter {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.tier-meter-track {
+  width: 4px;
+  flex: 1;
+  min-height: 40px;
+  border-radius: 2px;
+  background: var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.tier-meter-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 2px;
+  transition: height 0.3s;
+}
+.tier-score {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text3);
+  line-height: 1;
+}
+
+/* Card body */
+.card-body {
+  flex: 1;
+  padding: 12px 16px 12px 14px;
+  min-width: 0;
+}
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+.venue-tag {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.card-ts {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text3);
+}
+.unclassified-badge {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--surface2);
+  color: var(--text3);
+  border: 1px solid var(--border);
+}
+.card-title {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.card-title a { color: var(--text); }
+.card-title a:hover { color: var(--accent); text-decoration: none; }
+.card-summary {
+  font-size: 0.85rem;
+  color: var(--text2);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.card-score-detail {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text3);
+}
+
+/* Suppressed list */
+.suppressed-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 0;
+}
+.suppressed-toggle summary { list-style: none; display: flex; align-items: center; gap: 8px; }
+.suppressed-toggle summary::-webkit-details-marker { display: none; }
+.suppressed-caret {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text3);
+  transition: transform 0.15s;
+}
+details[open] .suppressed-caret { transform: rotate(90deg); }
+.suppressed-header-text {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.suppressed-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.suppressed-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.suppressed-item:last-child { border-bottom: none; }
+.suppressed-venue {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text3);
+  flex-shrink: 0;
+  width: 52px;
+  text-transform: uppercase;
+}
+.suppressed-title {
+  font-size: 0.82rem;
+  color: var(--text2);
+  flex: 1;
+}
+.suppressed-title a { color: var(--text2); }
+
+/* Footer */
+.footer {
+  margin-top: 40px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.footer span + span::before { content: "·"; margin-right: 12px; }
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .header-inner { gap: 10px; }
+  .coverage-strip { display: none; }
+  .main { padding: 16px 16px 48px; }
+  .card-body { padding: 10px 12px 10px 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tier-meter-fill, .suppressed-caret { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="wordmark">Sweep<span>Reader</span></div>
+    <div class="coverage-strip">{{ coverage_codes | join(' · ') }}</div>
+    <div class="header-controls">
+      {% if failures > 0 %}
+      <div class="health-pill error" title="{{ failures }} source(s) failed">⚠ {{ failures }} err</div>
+      {% else %}
+      <div class="health-pill">● live</div>
+      {% endif %}
+      <button class="theme-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark/light">◐</button>
+    </div>
+  </div>
+</header>
+
+<div class="scrubber-bar">
+  <div class="scrubber-inner">
+    <span class="scrubber-label">AS OF</span>
+    <input type="datetime-local" id="scrubber-input" aria-label="View as of date/time">
+    <button class="scrubber-now-btn" id="scrubber-now">NOW</button>
+  </div>
+</div>
+
+<main class="main" id="main-content">
+  {% macro render_card(item, cls, score) %}
+  <article class="card" data-first-seen="{{ item.first_seen_at.isoformat() }}" data-item-id="{{ item.id }}">
+    <div class="tier-rail">
+      <div class="tier-letter" style="color: {{ cls.tier | tier_color }}">{{ cls.tier }}</div>
+      <div class="tier-meter-track">
+        <div class="tier-meter-fill" style="height: {{ cls.relevance }}%; background: {{ cls.tier | tier_color }}; opacity: 0.75;"></div>
+      </div>
+      <div class="tier-score">{{ cls.relevance }}</div>
+    </div>
+    <div class="card-body">
+      <div class="card-meta">
+        <span class="venue-tag">{{ item.venue }}</span>
+        <span class="card-ts">{{ item.published_at.strftime("%Y-%m-%d") }}</span>
+        {% if cls.unclassified %}<span class="unclassified-badge">keyword</span>{% endif %}
+      </div>
+      <div class="card-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></div>
+      {% if cls.summary %}<div class="card-summary">{{ cls.summary }}</div>{% endif %}
+      <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }}</div>
+    </div>
+  </article>
+  {% endmacro %}
+
+  {% if new_today %}
+  <div class="section-header" id="section-today">New today · {{ new_today | length }} item{% if new_today | length != 1 %}s{% endif %}</div>
+  {% for item, cls, score in new_today %}{{ render_card(item, cls, score) }}{% endfor %}
+  {% endif %}
+
+  {% if earlier %}
+  <div class="section-header" id="section-earlier">Earlier · last {{ trailing_days }} days · {{ earlier | length }} item{% if earlier | length != 1 %}s{% endif %}</div>
+  {% for item, cls, score in earlier %}{{ render_card(item, cls, score) }}{% endfor %}
+  {% endif %}
+
+  {% if not new_today and not earlier %}
+  <div class="empty">No items in the trailing {{ trailing_days }}-day window.</div>
+  {% endif %}
+
+  {% if suppressed %}
+  <details id="suppressed-details" style="margin-top: 28px;">
+    <summary class="suppressed-toggle">
+      <span class="suppressed-caret">▶</span>
+      <span class="suppressed-header-text">Suppressed · {{ suppressed | length }}</span>
+    </summary>
+    <ul class="suppressed-list" id="suppressed-list">
+      {% for item, cls in suppressed %}
+      <li class="suppressed-item" data-first-seen="{{ item.first_seen_at.isoformat() }}">
+        <span class="suppressed-venue">{{ item.venue }}</span>
+        <span class="suppressed-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></span>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+
+  <footer class="footer">
+    <span>Last run: {{ now.strftime("%Y-%m-%d %H:%M UTC") }}</span>
+    <span>Model: {{ model }}</span>
+    <span>Window: {{ trailing_days }}d</span>
+    {% for src_id, health in source_health.items() %}
+    {% if health.get("status") == "error" %}
+    <span style="color:#EF4444">{{ src_id }}: error</span>
+    {% endif %}
+    {% endfor %}
+  </footer>
+</main>
+
+<script>
+(function() {
+  // Theme
+  const root = document.documentElement;
+  const saved = localStorage.getItem('sr-theme');
+  if (saved) root.setAttribute('data-theme', saved);
+  else if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme', 'dark');
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    const t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', t);
+    localStorage.setItem('sr-theme', t);
+  });
+
+  // Time-travel scrubber
+  const shards = {{ shards_json }};
+  const nowISO = "{{ now.strftime('%Y-%m-%dT%H:%M') }}";
+  const input = document.getElementById('scrubber-input');
+  const nowBtn = document.getElementById('scrubber-now');
+
+  input.value = nowISO;
+
+  function toLocalDatetimeValue(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    const pad = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+           'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function applyFilter(asOf) {
+    const cutoff = asOf ? new Date(asOf) : null;
+    const trailingMs = {{ trailing_days }} * 86400 * 1000;
+
+    document.querySelectorAll('.card, .suppressed-item').forEach(function(el) {
+      const fs = new Date(el.dataset.firstSeen);
+      if (!cutoff) { el.style.display = ''; return; }
+      const inWindow = fs <= cutoff && (cutoff - fs) <= trailingMs;
+      el.style.display = inWindow ? '' : 'none';
+    });
+  }
+
+  input.addEventListener('change', function() { applyFilter(input.value ? new Date(input.value) : null); });
+  nowBtn.addEventListener('click', function() {
+    input.value = toLocalDatetimeValue(new Date().toISOString());
+    applyFilter(null);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,9 +1,9 @@
-name: Deploy
+name: Rebuild Page
 
 on:
+  schedule:
+    - cron: "7 */3 * * *"
   workflow_dispatch:
-  push:
-    branches: [main]
 
 permissions:
   contents: write
@@ -15,13 +15,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  rebuild:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -34,17 +36,13 @@ jobs:
       - name: Run pipeline
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          SMTP_TO: ${{ secrets.SMTP_TO }}
         run: python -m sweepreader run --config config.yaml
 
       - name: Commit data shards
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/
+          git add data/items/ data/classifications/ data/state.json || true
           git diff --cached --quiet || git commit -m "chore: update data shards [skip ci]"
           git push || true
 
@@ -56,3 +54,18 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Flag failures
+        if: always()
+        run: |
+          python -c "
+          import json, sys
+          try:
+              state = json.load(open('data/state.json'))
+              failures = state.get('failures_this_run', 0)
+              if failures > 0:
+                  print(f'::warning::{failures} source(s) failed this run')
+                  sys.exit(1)
+          except FileNotFoundError:
+              pass
+          "

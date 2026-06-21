@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "13 10 * * *"
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (print instead of send)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -35,9 +40,13 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           SMTP_TO: ${{ secrets.SMTP_TO }}
-        run: python -m sweepreader email --config config.yaml
+        run: |
+          DRY_FLAG=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then DRY_FLAG="--dry-run"; fi
+          python -m sweepreader email --config config.yaml $DRY_FLAG
 
       - name: Commit state
+        if: ${{ inputs.dry_run != 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
