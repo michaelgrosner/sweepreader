@@ -22,6 +22,7 @@ def make_config() -> AppConfig:
         profile_prompt="Director-level engineer",
         tier_weights={"A": 1.0, "B": 0.85, "C": 0.55, "D": 0.40, "E": 0.10},
         sources=[],
+        max_age_days=183,
     )
 
 

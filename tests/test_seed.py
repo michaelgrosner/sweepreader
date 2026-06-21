@@ -1,11 +1,40 @@
 """Offline tests for the historical seed iterators (NYSE + MIAX)."""
 from __future__ import annotations
 
+from argparse import Namespace
 from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock, patch
 
 import sweepreader.ingest.nyse as nyse
 import sweepreader.ingest.miax as miax
+import sweepreader.cli.seed as seedmod
+from sweepreader.config import AppConfig, SourceConfig
+
+
+def test_seed_clamps_window_to_max_age():
+    cfg = AppConfig(
+        model="m", suppress_threshold=35, trailing_days=14, profile_prompt="p",
+        tier_weights={"A": 1.0, "B": 1.0, "C": 1.0, "D": 1.0, "E": 1.0},
+        sources=[SourceConfig(id="fed_register_sro", modality="api", parse="federal_register",
+                              default_tier_hint="D", weight=1.0)],
+        max_age_days=30,
+    )
+    captured = {}
+
+    def fake_fr(source_id, *, stop_before, cache=None):
+        captured["stop_before"] = stop_before
+        return iter(())
+
+    args = Namespace(config="x", months=12.0, source="fed_register_sro",
+                     no_cache=True, all_bodies=True, body_min_relevance=0)
+    with patch.object(seedmod, "load_config", return_value=cfg), \
+         patch.object(seedmod, "Store"), \
+         patch.object(seedmod.federal_register, "iter_seed_items", side_effect=fake_fr):
+        seedmod.cmd_seed(args)
+
+    now = datetime.now(timezone.utc)
+    # --months 12 (~365d) is clamped to max_age_days=30, not honored as requested.
+    assert now - timedelta(days=40) < captured["stop_before"] < now - timedelta(days=20)
 
 
 # --- NYSE -------------------------------------------------------------------

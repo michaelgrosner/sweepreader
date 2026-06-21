@@ -54,7 +54,15 @@ def cmd_seed(args) -> int:
 
     config = load_config(args.config)
     store = Store()
-    stop_before = datetime.now(timezone.utc) - timedelta(days=round(args.months * 30.44))
+    now = datetime.now(timezone.utc)
+    requested = now - timedelta(days=round(args.months * 30.44))
+    # Hard floor (SPEC: max_age_days): never seed past the max-age cutoff, even if
+    # --months asks for more.
+    floor = config.max_age_cutoff(now)
+    stop_before = max(requested, floor)
+    if stop_before != requested:
+        logger.info("seed: --months %.1f clamped to max_age_days=%d (%s)",
+                    args.months, config.max_age_days, stop_before.date())
     cache = None if args.no_cache else HttpCache()
     body_gate = None if args.all_bodies else _make_body_gate(config, args.body_min_relevance)
 

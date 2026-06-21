@@ -17,6 +17,7 @@ MINIMAL = """
     model: "anthropic/claude-haiku-4-5"
     suppress_threshold: 35
     trailing_days: 14
+    max_age_days: 183
     profile_prompt: "test"
     tier_weights: {A: 1.0, B: 0.85, C: 0.55, D: 0.40, E: 0.10}
     sources:
@@ -85,3 +86,23 @@ def test_config_hash_is_stable():
     cfg = load_config(write_config(MINIMAL))
     assert cfg.config_hash() == cfg.config_hash()
     assert len(cfg.config_hash()) == 16
+
+
+def test_max_age_days_required():
+    bad = MINIMAL.replace("    max_age_days: 183\n", "")
+    with pytest.raises(ValueError, match="missing required key 'max_age_days'"):
+        load_config(write_config(bad))
+
+
+def test_max_age_days_must_be_positive():
+    bad = MINIMAL.replace("max_age_days: 183", "max_age_days: 0")
+    with pytest.raises(ValueError, match="max_age_days must be a positive"):
+        load_config(write_config(bad))
+
+
+def test_max_age_cutoff_helper():
+    from datetime import datetime, timezone, timedelta
+    cfg = load_config(write_config(MINIMAL))
+    assert cfg.max_age_days == 183
+    now = datetime(2026, 6, 20, tzinfo=timezone.utc)
+    assert cfg.max_age_cutoff(now) == now - timedelta(days=183)

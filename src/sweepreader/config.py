@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -44,8 +45,14 @@ class AppConfig:
     profile_prompt: str
     tier_weights: dict[TierLabel, float]
     sources: list[SourceConfig]
+    max_age_days: int  # hard floor: never ingest/classify/score anything older than this
     page_url: str = ""
     classify_concurrency: int = 8
+
+    def max_age_cutoff(self, now: datetime | None = None) -> datetime:
+        """The oldest `published_at` allowed anywhere in the pipeline."""
+        now = now or datetime.now(timezone.utc)
+        return now - timedelta(days=self.max_age_days)
 
     def config_hash(self) -> str:
         blob = json.dumps(
@@ -97,13 +104,15 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         profile_prompt=raw["profile_prompt"],
         tier_weights=tier_weights,
         sources=sources,
+        max_age_days=int(raw["max_age_days"]),
         page_url=raw.get("page_url", ""),
         classify_concurrency=int(raw.get("classify_concurrency", 8)),
     )
 
 
 def _validate(raw: dict, path: str | Path) -> None:
-    required_top = ["model", "suppress_threshold", "trailing_days", "profile_prompt", "tier_weights", "sources"]
+    required_top = ["model", "suppress_threshold", "trailing_days", "profile_prompt",
+                    "tier_weights", "sources", "max_age_days"]
     for key in required_top:
         if key not in raw:
             raise ValueError(f"Config {path}: missing required key {key!r}")
@@ -111,6 +120,9 @@ def _validate(raw: dict, path: str | Path) -> None:
     threshold = raw["suppress_threshold"]
     if not (0 <= threshold <= 100):
         raise ValueError(f"Config {path}: suppress_threshold must be 0-100, got {threshold}")
+
+    if int(raw["max_age_days"]) <= 0:
+        raise ValueError(f"Config {path}: max_age_days must be a positive integer, got {raw['max_age_days']!r}")
 
     weights = raw["tier_weights"]
     missing = _VALID_TIERS - set(weights.keys())

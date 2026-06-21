@@ -20,8 +20,15 @@ def cmd_backtest(args) -> int:
     from_dt = datetime.fromisoformat(args.from_date).replace(tzinfo=timezone.utc)
     to_dt = datetime.fromisoformat(args.to_date).replace(tzinfo=timezone.utc)
 
+    # Hard floor (SPEC: max_age_days): never classify/score past the max-age cutoff.
+    floor = config.max_age_cutoff(to_dt)
+    if from_dt < floor:
+        logger.info("Backtest: from %s clamped to max_age_days=%d (%s)",
+                    args.from_date, config.max_age_days, floor.date())
+        from_dt = floor
+
     items = store.all_items_in_range(from_dt, to_dt)
-    logger.info("Backtest: %d items in range [%s, %s]", len(items), args.from_date, args.to_date)
+    logger.info("Backtest: %d items in range [%s, %s]", len(items), from_dt.date(), to_dt.date())
 
     config_hash = config.config_hash()
 

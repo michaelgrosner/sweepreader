@@ -2,6 +2,9 @@ model: "deepseek/deepseek-v4-flash"
 suppress_threshold: 35
 trailing_days: 14
 classify_concurrency: 8
+# Hard floor applied everywhere (run, seed, backtest): items published older than
+# this are fully ignored — never ingested, classified, or scored. Required.
+max_age_days: 183
 page_url: "https://michaelgrosner.github.io/sweepreader/"
 profile_prompt: |
   Director-level engineer on US equity-options market-making infrastructure.

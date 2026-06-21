@@ -75,6 +75,7 @@ There is **no separate source registry** — sources are one section of the app 
 model: "anthropic/claude-haiku-4.5"
 suppress_threshold: 35
 trailing_days: 14
+max_age_days: 183   # hard floor: never ingest/classify/score anything older (required)
 profile_prompt: |
   Director-level engineer on US equity-options market-making infrastructure.
   Cares most about: protocol/spec changes, new venues & order types, certification

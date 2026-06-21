@@ -187,6 +187,7 @@ python -m sweepreader seed --months 6                 # all seedable sources (Fe
 python -m sweepreader seed --months 6 --source fed_register_sro   # just one source
 ```
 - No `OPENROUTER_API_KEY` needed — `seed` only fetches/stores; classification happens later in `run`/`backtest` (only uncached items cost tokens).
+- **`max_age_days` is a hard floor** (in `config.yaml`, default 183 ≈ 6 months): `run`, `seed`, and `backtest` never ingest, classify, or score anything published older than it. `seed --months` beyond that is clamped to the floor (and logged).
 - **Federal Register, NYSE, IEX** are fast (paginated JSON APIs, content inline). **OPRA** is a single homepage fetch (all notice history) plus one PDF per notice. **MIAX** walks `?page=N` and uses *teaser-first + lazy body*: it fetches a full alert page only for items that pass a cheap keyword relevance gate (tier-E noise stays teaser-only), so a 6-month seed skips most detail fetches. Tune with `--all-bodies` (fetch everything) or `--body-min-relevance N`.
 - Not seedable: the plain-RSS sources (OCC, CAT, Nasdaqtrader, SEC, MEMX) expose only a recent window, and BOX's listing/feed likewise (BOX filing history is in the Federal Register).
 - Responses are cached under `.cache/http` (gitignored), so a re-run or an interrupted seed resumes without re-downloading. `--no-cache` disables it.

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from sweepreader.config import load_config
 from sweepreader.ingest.base import fetch_source
@@ -89,9 +89,19 @@ def cmd_run(args) -> int:
         all_new_items.extend(items)
         logger.info("source=%s fetched %d items", source.id, len(items))
 
+    now = datetime.now(timezone.utc)
+    max_age_cutoff = config.max_age_cutoff(now)
+
+    # Hard floor (SPEC: max_age_days): drop anything older than the cutoff before
+    # it is ever stored or classified.
+    before = len(all_new_items)
+    all_new_items = [i for i in all_new_items if i.published_at >= max_age_cutoff]
+    dropped = before - len(all_new_items)
+    if dropped:
+        logger.info("dropped %d fetched item(s) older than max_age_days=%d", dropped, config.max_age_days)
+
     assign_clusters(all_new_items)
 
-    now = datetime.now(timezone.utc)
     existing_clss = store.classifications_as_of(now, config.model, config_hash)
 
     new_count = 0
@@ -112,13 +122,12 @@ def cmd_run(args) -> int:
 
     # Backfill: items in the trailing window that need classification under the current
     # hash — either no classification exists yet, or they fell back to keyword and should
-    # be upgraded now that an LLM is available. Skip items older than 6 months.
-    six_months_ago = now - timedelta(days=183)
+    # be upgraded now that an LLM is available. Never classify past the max-age floor.
     fetched_ids = {item.id for item in all_new_items}
     backfill = [
         item for item in store.items_as_of(now, config.trailing_days)
         if item.id not in fetched_ids
-        and item.published_at >= six_months_ago
+        and item.published_at >= max_age_cutoff
         and (
             existing_clss.get(item.id) is None
             or existing_clss[item.id].unclassified
