@@ -364,6 +364,27 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
 }
 .suppressed-title a { color: var(--text2); }
 
+.card-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.feedback-btns { display: flex; gap: 4px; }
+.fb-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  color: var(--text3);
+  line-height: 1.4;
+}
+.fb-btn:hover { border-color: var(--accent); color: var(--accent); }
+.fb-btn.active-up { border-color: #22C55E; color: #22C55E; }
+.fb-btn.active-down { border-color: #EF4444; color: #EF4444; }
+
 /* Footer */
 .footer {
   margin-top: 40px;
@@ -441,7 +462,13 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
       </div>
       <div class="card-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></div>
       {% if cls.summary %}<div class="card-summary">{{ cls.summary }}</div>{% endif %}
-      <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }}</div>
+      <div class="card-footer-row">
+        <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }}</div>
+        <div class="feedback-btns">
+          <button class="fb-btn" data-item="{{ item.id }}" data-signal="up" title="Relevant" aria-label="Mark relevant">↑</button>
+          <button class="fb-btn" data-item="{{ item.id }}" data-signal="down" title="Not relevant" aria-label="Mark not relevant">↓</button>
+        </div>
+      </div>
     </div>
   </article>
   {% endmacro %}
@@ -535,6 +562,22 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
   nowBtn.addEventListener('click', function() {
     input.value = toLocalDatetimeValue(new Date().toISOString());
     applyFilter(null);
+  });
+
+  // Feedback — persisted in localStorage; a CI job can read exported feedback JSON
+  var fb = JSON.parse(localStorage.getItem('sr-feedback') || '{}');
+  document.querySelectorAll('.fb-btn').forEach(function(btn) {
+    var itemId = btn.dataset.item;
+    var sig = btn.dataset.signal;
+    if (fb[itemId] === sig) btn.classList.add(sig === 'up' ? 'active-up' : 'active-down');
+    btn.addEventListener('click', function() {
+      fb[itemId] = sig;
+      localStorage.setItem('sr-feedback', JSON.stringify(fb));
+      btn.parentElement.querySelectorAll('.fb-btn').forEach(function(b) {
+        b.classList.remove('active-up', 'active-down');
+      });
+      btn.classList.add(sig === 'up' ? 'active-up' : 'active-down');
+    });
   });
 })();
 </script>

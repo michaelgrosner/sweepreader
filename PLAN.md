@@ -65,14 +65,11 @@ pip install -r requirements.txt
 
 ## Phase 2 — Email ingestion
 
-**2.1 Stand up the dedicated Gmail (§9).** New account → 2-Step Verification → App Password → enable IMAP → store IMAP secrets. Send yourself a test to `you+test@`.
-**Done when** the test message is readable over IMAP from a local script.
+**2.1 Stand up the dedicated Gmail (§9).** ⚠️ **Requires manual action** — create Google account, enable 2-Step Verification, generate App Password, enable IMAP. Add secrets `IMAP_HOST=imap.gmail.com`, `IMAP_USER`, `IMAP_PASSWORD` to GitHub repo. Done when a test message is readable over IMAP.
 
-**2.2 EmailIngestor adapter.** IMAP read-only, fetch UID > watermark, **attribute by delivered-to address**, strip HTML → text, follow teaser links / extract PDFs (`pdfplumber`), emit `Item`s, advance the watermark idempotently.
-**Done when** a message to `you+miax@` becomes an `Item` with `source_id = email_miax`, and re-running reprocesses nothing.
+**2.2 EmailIngestor adapter.** ✅ `src/sweepreader/ingest/email_ingestor.py` — IMAP SSL read-only, attributes by Delivered-To, strips HTML→text, advances UID watermark stored in `state.json` under `imap_uid_{source_id}`. IMAP creds read at call time from env. 4 fixture-based tests pass.
 
-**2.3 Subscribe and enable Tier-2 venues.** Subscribe the Gmail (via `+tag` addresses) to MIAX, NYSE, BOX, IEX, 24X lists; flip their config entries `enabled: true`; add spam-exception filters.
-**Done when** each Tier-2 source shows fetches and a green health entry; rule filings still arrive via Federal Register without duplication.
+**2.3 Subscribe and enable Tier-2 venues.** ⚠️ **Requires manual action** — subscribe `you+miax@`, `you+nyse@`, `you+box@`, `you+iex@`, `you+24x@` to venue mailing lists, then flip `enabled: true` in `config.yaml` for each. Config entries are already present.
 
 ---
 
@@ -85,11 +82,9 @@ pip install -r requirements.txt
 
 ## Phase 4 — Feedback loop (optional)
 
-**4.1 Capture feedback.** Thumbs up/down on each card writes `{item_id, signal, config_hash, ts}` to an append-only `data/feedback/…jsonl`.
-**Done when** clicks persist and survive a rebuild.
+**4.1 Capture feedback.** ✅ `src/sweepreader/store/feedback.py` — `FeedbackStore.record()` appends `{item_id, signal, config_hash, ts}` to month-sharded JSONL. Page template has thumbs up/down buttons on each card persisted to `localStorage`. ⚠️ *GitHub Pages is static — localStorage is client-only; to persist to the repo would require a GitHub Actions form trigger or separate service. Review feedback by exporting localStorage JSON manually.*
 
-**4.2 Use it to tune.** Periodically review feedback against the profile prompt and weights; adjust (both data); backtest the change before adopting.
-**Done when** a tuning change is justified by a feedback-driven backtest diff, not a guess.
+**4.2 Use it to tune.** Review `localStorage` feedback periodically, adjust `profile_prompt` or `tier_weights` in `config.yaml`, run `python -m sweepreader backtest --from YYYY-MM-DD --to YYYY-MM-DD --config config.yaml` to validate ranking diff before committing.
 
 ---
 
