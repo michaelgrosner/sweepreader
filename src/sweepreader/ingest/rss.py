@@ -37,7 +37,7 @@ _VENUE_FROM_SOURCE: dict[str, str] = {
 }
 
 
-def _parse_date(entry) -> datetime:
+def _parse_date(entry) -> datetime | None:
     for attr in ("published_parsed", "updated_parsed"):
         val = getattr(entry, attr, None)
         if val:
@@ -53,7 +53,7 @@ def _parse_date(entry) -> datetime:
                 return parsedate_to_datetime(val).astimezone(timezone.utc)
             except Exception:
                 pass
-    return datetime.now(timezone.utc)
+    return None
 
 
 def _title_from_url(url: str) -> str:
@@ -104,8 +104,8 @@ class RssAdapter(BaseAdapter):
 
             pub_dt = _parse_date(entry)
 
-            # Skip items older than lookback window
-            if pub_dt < cutoff:
+            # Skip items with no parseable date or older than lookback window
+            if pub_dt is None or pub_dt < cutoff:
                 continue
 
             title = entry.get("title", "").strip()

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sweepreader.config import load_config
@@ -51,14 +52,25 @@ def cmd_run(args) -> int:
     # Cluster across all sources before persisting
     assign_clusters(all_new_items)
 
+    # Pre-load existing classifications so we can check unclassified status
+    now = datetime.now(timezone.utc)
+    existing_clss = store.classifications_as_of(now, config.model, config_hash)
+
     new_count = 0
     for item in all_new_items:
         added = store.append_item(item)
         if not added:
-            continue
-        new_count += 1
+            # Item already in store — check if it has a keyword-fallback classification
+            # that should be upgraded now that an LLM is available.
+            existing = existing_clss.get(item.id)
+            if existing is None or not existing.unclassified or llm is None:
+                continue
+        else:
+            new_count += 1
+            existing = existing_clss.get(item.id)
 
-        if store.has_classification(item.id, config.model, config_hash):
+        # Skip if already LLM-classified
+        if existing is not None and not existing.unclassified:
             continue
 
         if llm is not None:
@@ -67,7 +79,8 @@ def cmd_run(args) -> int:
             cls = keyword_fallback(item, config.model, config_hash)
 
         if not args.dry_run:
-            store.append_classification(cls)
+            # force=True upgrades a keyword-fallback record with the LLM result
+            store.append_classification(cls, force=(existing is not None and existing.unclassified))
 
     logger.info("total new_items=%d", new_count)
 

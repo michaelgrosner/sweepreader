@@ -64,10 +64,14 @@ class Store:
         self._known_item_ids.add(item.id)
         return True
 
-    def append_classification(self, cls: Classification) -> bool:
+    def append_classification(self, cls: Classification, force: bool = False) -> bool:
         key = (cls.item_id, cls.model, cls.config_hash)
-        if key in self._known_class_keys:
+        if key in self._known_class_keys and not force:
             return False
+        # force=True: allow a newer classification to supersede an existing one.
+        # classifications_as_of() picks the latest by classified_at, so the new
+        # record wins without touching earlier records (append-only invariant preserved).
+        self._known_class_keys.discard(key)
         shard = _shard_key(cls.classified_at)
         path = self._class_dir / f"{shard}.jsonl"
         with path.open("a") as f:

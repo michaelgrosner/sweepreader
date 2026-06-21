@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SweepReader</title>
+<script>(function(){var r=document.documentElement;try{var s=localStorage.getItem('sr-theme');if(s)r.setAttribute('data-theme',s);else if(window.matchMedia('(prefers-color-scheme: dark)').matches)r.setAttribute('data-theme','dark');else r.setAttribute('data-theme','light');}catch(e){r.setAttribute('data-theme','light');}})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -518,16 +519,12 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
 
 <script>
 (function() {
-  // Theme
   const root = document.documentElement;
-  const saved = localStorage.getItem('sr-theme');
-  if (saved) root.setAttribute('data-theme', saved);
-  else if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme', 'dark');
 
   document.getElementById('theme-toggle').addEventListener('click', function() {
     const t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', t);
-    localStorage.setItem('sr-theme', t);
+    try { localStorage.setItem('sr-theme', t); } catch(e) {}
   });
 
   // Time-travel scrubber

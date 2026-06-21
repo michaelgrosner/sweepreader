@@ -44,8 +44,8 @@ def render_page(config: "AppConfig", store: "Store", state: "StateStore") -> Non
 
     visible, suppressed = rank_items(items, classifications, config, now)
 
-    new_today = [(item, cls, score) for item, cls, score in visible if _is_today(item.first_seen_at, now)]
-    earlier = [(item, cls, score) for item, cls, score in visible if not _is_today(item.first_seen_at, now)]
+    new_today = [(item, cls, score) for item, cls, score in visible if _is_today(item.published_at, now)]
+    earlier = [(item, cls, score) for item, cls, score in visible if not _is_today(item.published_at, now)]
 
     source_health = state.get("source_health", {})
     failures = state.get("failures_this_run", 0)
