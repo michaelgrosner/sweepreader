@@ -103,7 +103,7 @@ def test_render_page_ranked_order(tmp_dirs, monkeypatch):
         raw_text="", modality="rss",
     )
     cls_d = Classification(
-        item_id=item_d.id, model="m", config_hash="h",
+        item_id=item_d.id, model=config.model, config_hash="h",
         classified_at=now, relevance=95, tier="D",
         rationale="r", summary="D summary",
     )
@@ -115,7 +115,7 @@ def test_render_page_ranked_order(tmp_dirs, monkeypatch):
         raw_text="", modality="rss",
     )
     cls_b = Classification(
-        item_id=item_b.id, model="m", config_hash="h",
+        item_id=item_b.id, model=config.model, config_hash="h",
         classified_at=now, relevance=40, tier="B",
         rationale="r", summary="B summary",
     )
@@ -141,6 +141,47 @@ def test_render_page_ranked_order(tmp_dirs, monkeypatch):
     assert d_pos < b_pos, "High-relevance D item should appear before low-relevance B"
 
 
+def test_render_tags_chips_and_filter_bar(tmp_dirs, monkeypatch):
+    data_dir, docs_dir = tmp_dirs
+    store = Store(data_dir)
+    state = StateStore(data_dir)
+    config = make_config()
+
+    now = datetime(2026, 6, 20, 12, 0, 0, tzinfo=timezone.utc)
+    item = Item(
+        id=Item.make_id("src", "https://example.com/spec"),
+        source_id="src", venue="CBOE", title="Spec change with tags",
+        url="https://example.com/spec", published_at=now, first_seen_at=now,
+        raw_text="", modality="rss",
+    )
+    cls = Classification(
+        item_id=item.id, model=config.model, config_hash="h",
+        classified_at=now, relevance=80, tier="A",
+        rationale="r", summary="A summary",
+        tags=["protocol", "options", "deadline"],
+    )
+    store.append_item(item)
+    store.append_classification(cls)
+
+    import sweepreader.render.page as page_mod
+    monkeypatch.setattr(page_mod, "_DOCS_DIR", docs_dir)
+    config.config_hash = lambda: "h"
+
+    render_page(config, store, state)
+    content = (docs_dir / "index.html").read_text()
+
+    # Chips on the card + data-tags attribute for client filtering
+    assert 'class="tag-chip">protocol<' in content
+    assert 'data-tags="protocol options deadline"' in content
+    # Filter bar with grouped, present-only facets (axes by name)
+    assert 'class="filter-bar"' in content
+    assert 'data-tag="protocol" data-axis="Subject"' in content
+    assert 'data-tag="options" data-axis="Market"' in content
+    assert 'data-tag="deadline" data-axis="Action"' in content
+    # A tag NOT present in any item should not appear as a filter chip
+    assert 'data-tag="symbology"' not in content
+
+
 def test_suppressed_not_in_main_body(tmp_dirs, monkeypatch):
     data_dir, docs_dir = tmp_dirs
     store = Store(data_dir)
@@ -155,7 +196,7 @@ def test_suppressed_not_in_main_body(tmp_dirs, monkeypatch):
         raw_text="Halt declared", modality="rss",
     )
     cls = Classification(
-        item_id=item.id, model="m", config_hash="h2",
+        item_id=item.id, model=config.model, config_hash="h2",
         classified_at=now, relevance=10, tier="E",
         rationale="routine halt", summary=None,
     )

@@ -1,22 +1,30 @@
 # Future Features
 
-## Tags
+## Tags — ✅ done
 
-Apply a structured tag set to each item alongside tier/relevance. The LLM would populate tags as part of the classification response; tags would be filterable on the page.
+Structured, multi-select tag set per item, populated by the LLM and filterable in
+the web UI.
 
-**Proposed axes** (independent, multi-select):
+**Implemented:**
+- Controlled vocabulary in `src/sweepreader/tags.py` (three axes — Subject /
+  Market / Action — with `sanitize_tags` to normalize + filter LLM output to the
+  closed set so the filter UI stays bounded).
+- `Classification.tags: list[str]` (round-trips through the store; back-compat
+  default `[]`).
+- LLM prompt + JSON schema ask for tags from the axes; `keyword_fallback`
+  derives conservative market/`rule-filing` tags without the LLM.
+- Tag chips on each card; a faceted filter bar (only tags present in the current
+  view, grouped by axis). Client-side filtering combines with the time-travel
+  scrubber: **within an axis OR, across axes AND**; empty section headers hide.
 
-| Axis | Tags |
-|---|---|
-| **Subject** | `protocol` `order-type` `connectivity` `symbology` `cert-window` `new-venue` `rule-filing` `fee-change` `system-status` `margin-capital` `surveillance` |
-| **Market** | `options` `equities` `futures` `fixed-income` |
-| **Action** | `deadline` `action-required` `watch` |
+Axes: Subject (`protocol` `order-type` `connectivity` `symbology` `cert-window`
+`new-venue` `rule-filing` `fee-change` `system-status` `margin-capital`
+`surveillance`), Market (`options` `equities` `futures` `fixed-income`), Action
+(`deadline` `action-required` `watch`).
 
-**Implementation sketch:**
-- Add `tags: list[str]` to `Classification` dataclass
-- Add tag extraction to the LLM prompt and JSON schema
-- Render tag chips on each card
-- Client-side filter bar on the page (similar to the existing scrubber)
+Note: existing classifications keep empty tags (config_hash unchanged, so no
+forced re-classification). Re-run/backtest under a changed config to populate
+tags on historical items. The email digest does not yet show chips.
 
 ---
 

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 from sweepreader.store.models import Classification
+from sweepreader.tags import TAG_AXES, sanitize_tags
 
 if TYPE_CHECKING:
     from sweepreader.config import AppConfig
@@ -28,6 +29,7 @@ _CLASSIFY_SCHEMA = {
         "relevance": {"type": "integer", "minimum": 0, "maximum": 100},
         "tier": {"type": "string", "enum": ["A", "B", "C", "D", "E"]},
         "venues": {"type": "array", "items": {"type": "string"}},
+        "tags": {"type": "array", "items": {"type": "string"}},
         "rationale": {"type": "string"},
         "summary": {"type": ["string", "null"]},
     },
@@ -43,6 +45,10 @@ _TIER_DESCRIPTIONS = {
 }
 
 
+def _tag_guidance() -> str:
+    return "\n".join(f"  {axis}: {', '.join(tags)}" for axis, tags in TAG_AXES.items())
+
+
 def _build_prompt(item: "Item", config: "AppConfig", suppress_threshold: int) -> str:
     tier_desc = "\n".join(f"  {k}: {v}" for k, v in _TIER_DESCRIPTIONS.items())
     return f"""You are classifying a financial regulatory item for relevance to:
@@ -50,6 +56,9 @@ def _build_prompt(item: "Item", config: "AppConfig", suppress_threshold: int) ->
 
 Tier definitions:
 {tier_desc}
+
+Tag axes (pick ONLY applicable tags from these exact values; omit any that don't apply):
+{_tag_guidance()}
 
 Item to classify:
 Title: {item.title}
@@ -64,6 +73,7 @@ Respond ONLY with valid JSON matching this schema:
   "relevance": <integer 0-100>,
   "tier": <"A"|"B"|"C"|"D"|"E">,
   "venues": [<exchange codes affected>],
+  "tags": [<zero or more tags from the axes above, exact values only>],
   "rationale": <1-2 sentence rationale>,
   "summary": <2-3 sentence summary for the reader, or null if relevance < {suppress_threshold}>
 }}
@@ -110,6 +120,23 @@ _KEYWORD_TIERS: list[tuple[list[str], str, int]] = [
 ]
 
 
+def _fallback_tags(item: "Item") -> list[str]:
+    """Conservative tags derivable without the LLM: market from the source/venue,
+    plus rule-filing for Federal Register items."""
+    sid = item.source_id.lower()
+    blob = (sid + " " + item.venue.lower())
+    tags: list[str] = []
+    if "option" in blob:
+        tags.append("options")
+    if "equit" in blob:
+        tags.append("equities")
+    if "futur" in blob:
+        tags.append("futures")
+    if sid == "fed_register_sro":
+        tags.append("rule-filing")
+    return tags
+
+
 def keyword_fallback(item: "Item", model: str, config_hash: str) -> Classification:
     title_lower = item.title.lower()
     text_lower = item.raw_text.lower()
@@ -132,6 +159,7 @@ def keyword_fallback(item: "Item", model: str, config_hash: str) -> Classificati
         rationale="Keyword-based fallback classification",
         summary=None,
         venues=[item.venue],
+        tags=sanitize_tags(_fallback_tags(item)),
         unclassified=True,
     )
 
@@ -191,6 +219,7 @@ class OpenRouterClient(LlmClient):
                         rationale=data["rationale"],
                         summary=data.get("summary"),
                         venues=data.get("venues", [item.venue]),
+                        tags=sanitize_tags(data.get("tags")),
                         unclassified=False,
                     )
                 logger.warning("LLM returned invalid JSON on attempt %d for item %s: %.120r",

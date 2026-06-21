@@ -65,6 +65,7 @@ class Classification:
     rationale: str
     summary: Optional[str]
     venues: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     unclassified: bool = False
 
     def to_dict(self) -> dict:
@@ -78,6 +79,7 @@ class Classification:
             "rationale": self.rationale,
             "summary": self.summary,
             "venues": self.venues,
+            "tags": self.tags,
             "unclassified": self.unclassified,
         }
 
@@ -93,5 +95,6 @@ class Classification:
             rationale=d["rationale"],
             summary=d.get("summary"),
             venues=d.get("venues", []),
+            tags=d.get("tags", []),
             unclassified=d.get("unclassified", False),
         )

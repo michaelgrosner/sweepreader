@@ -68,6 +68,34 @@ def test_classify_valid_response():
     assert cls.config_hash == config.config_hash()
 
 
+def test_classify_parses_and_sanitizes_tags():
+    config = make_config()
+    item = make_item()
+    payload = {
+        "relevance": 80, "tier": "A", "venues": ["CBOE"], "rationale": "r",
+        "summary": "s",
+        # mix of valid (incl. messy casing/spacing) and invalid tags
+        "tags": ["protocol", "Options", "cert window", "not-a-real-tag", "protocol"],
+    }
+    with patch("sweepreader.classify.classifier.httpx.post", return_value=mock_openrouter_response(payload)):
+        cls = OpenRouterClient(api_key="test-key").classify(item, config)
+
+    # normalized, deduped, filtered to the allowed vocabulary
+    assert cls.tags == ["protocol", "options", "cert-window"]
+
+
+def test_keyword_fallback_derives_market_tags():
+    config = make_config()
+    item = make_item("Protocol specification update")  # cboe_options_tech source
+    cls = keyword_fallback(item, config.model, config.config_hash())
+    assert "options" in cls.tags
+
+    fr_item = make_item("Self-regulatory rule filing")
+    fr_item.source_id = "fed_register_sro"
+    fr_cls = keyword_fallback(fr_item, config.model, config.config_hash())
+    assert "rule-filing" in fr_cls.tags
+
+
 def test_classify_falls_back_on_bad_json():
     config = make_config()
     item = make_item()

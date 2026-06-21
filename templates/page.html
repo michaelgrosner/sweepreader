@@ -174,6 +174,72 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 }
 .scrubber-now-btn:hover { opacity: 0.85; }
 
+/* Tag filter bar */
+.filter-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 24px;
+}
+.filter-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+}
+.filter-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+.filter-axis { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.filter-axis-name {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+}
+.filter-chip {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+  user-select: none;
+}
+.filter-chip:hover { border-color: var(--accent); }
+.filter-chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.filter-clear {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text3);
+  cursor: pointer;
+}
+.filter-clear:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Card tag chips */
+.card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.tag-chip {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  letter-spacing: 0.03em;
+}
+
 /* Main content */
 .main {
   max-width: 900px;
@@ -457,9 +523,26 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
   </div>
 </div>
 
+{% if filter_axes %}
+<div class="filter-bar">
+  <div class="filter-inner">
+    <span class="filter-label">TAGS</span>
+    {% for axis, tags in filter_axes.items() %}
+    <span class="filter-axis">
+      <span class="filter-axis-name">{{ axis }}</span>
+      {% for tag in tags %}
+      <button class="filter-chip" data-tag="{{ tag }}" data-axis="{{ axis }}">{{ tag }}</button>
+      {% endfor %}
+    </span>
+    {% endfor %}
+    <button class="filter-clear" id="filter-clear" hidden>clear</button>
+  </div>
+</div>
+{% endif %}
+
 <main class="main" id="main-content">
   {% macro render_card(item, cls, score) %}
-  <article class="card" data-first-seen="{{ item.first_seen_at.isoformat() }}" data-item-id="{{ item.id }}">
+  <article class="card" data-first-seen="{{ item.first_seen_at.isoformat() }}" data-item-id="{{ item.id }}" data-tags="{{ cls.tags | join(' ') }}">
     <div class="tier-rail">
       <div class="tier-letter" style="color: {{ cls.tier | tier_color }}">{{ cls.tier }}</div>
       <div class="tier-meter-track">
@@ -475,6 +558,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
       </div>
       <div class="card-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></div>
       {% if cls.summary %}<div class="card-summary">{{ cls.summary }}</div>{% endif %}
+      {% if cls.tags %}<div class="card-tags">{% for tag in cls.tags %}<span class="tag-chip">{{ tag }}</span>{% endfor %}</div>{% endif %}
       <div class="card-footer-row">
         <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }} <span class="item-id" data-id="{{ item.id }}" title="Click to copy ID">{{ item.id[:8] }}</span></div>
         <div class="feedback-btns">
@@ -508,7 +592,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     </summary>
     <ul class="suppressed-list" id="suppressed-list">
       {% for item, cls in suppressed %}
-      <li class="suppressed-item" data-first-seen="{{ item.first_seen_at.isoformat() }}">
+      <li class="suppressed-item" data-first-seen="{{ item.first_seen_at.isoformat() }}" data-tags="{{ cls.tags | join(' ') }}">
         <span class="suppressed-venue">{{ item.venue }}</span>
         <span class="suppressed-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></span>
       </li>
@@ -550,13 +634,16 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     });
   });
 
-  // Time-travel scrubber
-  const shards = {{ shards_json }};
+  // Combined filtering: time-travel scrubber + tag facets.
   const nowISO = "{{ now.strftime('%Y-%m-%dT%H:%M') }}";
   const input = document.getElementById('scrubber-input');
   const nowBtn = document.getElementById('scrubber-now');
+  const trailingMs = {{ trailing_days }} * 86400 * 1000;
 
   input.value = nowISO;
+
+  let timeCutoff = null;            // Date, or null = "now" (no time filter)
+  const selected = {};             // axis -> Set(tag); within axis OR, across axes AND
 
   function toLocalDatetimeValue(isoStr) {
     if (!isoStr) return '';
@@ -566,22 +653,67 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
            'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
-  function applyFilter(asOf) {
-    const cutoff = asOf ? new Date(asOf) : null;
-    const trailingMs = {{ trailing_days }} * 86400 * 1000;
+  function passesTime(el) {
+    if (!timeCutoff) return true;
+    const fs = new Date(el.dataset.firstSeen);
+    return fs <= timeCutoff && (timeCutoff - fs) <= trailingMs;
+  }
 
-    document.querySelectorAll('.card, .suppressed-item').forEach(function(el) {
-      const fs = new Date(el.dataset.firstSeen);
-      if (!cutoff) { el.style.display = ''; return; }
-      const inWindow = fs <= cutoff && (cutoff - fs) <= trailingMs;
-      el.style.display = inWindow ? '' : 'none';
+  function passesTags(el) {
+    const axes = Object.keys(selected).filter(a => selected[a].size);
+    if (!axes.length) return true;
+    const tags = new Set((el.dataset.tags || '').split(' ').filter(Boolean));
+    return axes.every(function(a) {
+      for (const t of selected[a]) if (tags.has(t)) return true;
+      return false;
     });
   }
 
-  input.addEventListener('change', function() { applyFilter(input.value ? new Date(input.value) : null); });
+  function applyFilters() {
+    document.querySelectorAll('.card, .suppressed-item').forEach(function(el) {
+      el.style.display = (passesTime(el) && passesTags(el)) ? '' : 'none';
+    });
+    // Hide a section header when none of its cards are visible.
+    document.querySelectorAll('.section-header').forEach(function(h) {
+      let n = h.nextElementSibling, any = false;
+      while (n && !n.classList.contains('section-header')) {
+        if (n.classList.contains('card') && n.style.display !== 'none') { any = true; break; }
+        n = n.nextElementSibling;
+      }
+      h.style.display = any ? '' : 'none';
+    });
+  }
+
+  input.addEventListener('change', function() {
+    timeCutoff = input.value ? new Date(input.value) : null;
+    applyFilters();
+  });
   nowBtn.addEventListener('click', function() {
     input.value = toLocalDatetimeValue(new Date().toISOString());
-    applyFilter(null);
+    timeCutoff = null;
+    applyFilters();
+  });
+
+  // Tag filter chips
+  const clearBtn = document.getElementById('filter-clear');
+  function updateClear() {
+    if (clearBtn) clearBtn.hidden = !Object.values(selected).some(s => s.size);
+  }
+  document.querySelectorAll('.filter-chip').forEach(function(chip) {
+    const axis = chip.dataset.axis, tag = chip.dataset.tag;
+    if (!selected[axis]) selected[axis] = new Set();
+    chip.addEventListener('click', function() {
+      if (selected[axis].has(tag)) { selected[axis].delete(tag); chip.classList.remove('active'); }
+      else { selected[axis].add(tag); chip.classList.add('active'); }
+      updateClear();
+      applyFilters();
+    });
+  });
+  if (clearBtn) clearBtn.addEventListener('click', function() {
+    Object.values(selected).forEach(s => s.clear());
+    document.querySelectorAll('.filter-chip.active').forEach(c => c.classList.remove('active'));
+    updateClear();
+    applyFilters();
   });
 
   // Feedback — persisted in localStorage; a CI job can read exported feedback JSON

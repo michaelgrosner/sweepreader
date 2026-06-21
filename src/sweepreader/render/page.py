@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -9,6 +8,7 @@ from typing import TYPE_CHECKING
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from sweepreader.score import rank_items
+from sweepreader.tags import TAG_AXES
 
 if TYPE_CHECKING:
     from sweepreader.config import AppConfig
@@ -47,13 +47,24 @@ def render_page(config: "AppConfig", store: "Store", state: "StateStore") -> Non
     new_today = [(item, cls, score) for item, cls, score in visible if _is_today(item.published_at, now)]
     earlier = [(item, cls, score) for item, cls, score in visible if not _is_today(item.published_at, now)]
 
+    # Tags actually present across rendered items, grouped by axis (so the filter
+    # bar only offers tags that exist in the current view).
+    present_set: set[str] = set()
+    for _item, cls, _score in visible:
+        present_set.update(cls.tags)
+    for _item, cls in suppressed:
+        present_set.update(cls.tags)
+    filter_axes = {
+        axis: [t for t in tags if t in present_set]
+        for axis, tags in TAG_AXES.items()
+    }
+    filter_axes = {axis: tags for axis, tags in filter_axes.items() if tags}
+
     source_health = state.get("source_health", {})
     failures = state.get("failures_this_run", 0)
 
     enabled_sources = [s for s in config.sources if s.enabled]
     coverage_codes = sorted({s.id.replace("_tech", "").replace("_reg", "").upper()[:8] for s in enabled_sources})
-
-    recent_shards = _collect_shards(store, now)
 
     env = Environment(
         loader=FileSystemLoader(str(_TEMPLATES_DIR)),
@@ -73,36 +84,11 @@ def render_page(config: "AppConfig", store: "Store", state: "StateStore") -> Non
         failures=failures,
         model=config.model,
         trailing_days=config.trailing_days,
-        shards_json=json.dumps(recent_shards),
         tier_colors=_TIER_COLORS,
         tier_weights=config.tier_weights,
+        filter_axes=filter_axes,
     )
 
     _DOCS_DIR.mkdir(exist_ok=True)
     (_DOCS_DIR / "index.html").write_text(html)
     logger.info("Page rendered: %d visible, %d suppressed", len(visible), len(suppressed))
-
-
-def _collect_shards(store: "Store", now: datetime) -> list[dict]:
-    """Collect last 2 months of items as lightweight JSON for client-side time-travel."""
-    results: list[dict] = []
-    for p in sorted(store._items_dir.glob("*.jsonl"), reverse=True)[:2]:
-        for line in p.read_text().splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                import json as _json
-                d = _json.loads(line)
-                results.append({
-                    "id": d["id"],
-                    "title": d["title"],
-                    "url": d["url"],
-                    "venue": d["venue"],
-                    "published_at": d["published_at"],
-                    "first_seen_at": d["first_seen_at"],
-                    "source_id": d["source_id"],
-                })
-            except Exception:
-                pass
-    return results
