@@ -73,15 +73,8 @@ def test_federal_register_adapter_parses_fixture():
     mock_resp.json.return_value = payload
     mock_resp.raise_for_status = MagicMock()
 
-    # Return payload on first call, empty on second (stops pagination)
-    empty = MagicMock()
-    empty.json.return_value = {"results": []}
-    empty.raise_for_status = MagicMock()
-
-    with patch("sweepreader.ingest.federal_register.httpx.Client") as mock_client_cls:
-        mock_client = MagicMock()
-        mock_client_cls.return_value.__enter__.return_value = mock_client
-        mock_client.get.side_effect = [mock_resp, empty]
+    # The fixture has 2 results (< per_page), so pagination stops after page 1.
+    with patch("sweepreader.ingest.federal_register.httpx.get", return_value=mock_resp):
         items = FederalRegisterAdapter(fr_source()).fetch()
 
     assert len(items) == 2
@@ -93,20 +86,31 @@ def test_federal_register_adapter_parses_fixture():
     assert cboe_item.venue == "CBOE"
 
 
+def test_federal_register_seed_first_seen_is_published():
+    from datetime import datetime, timezone, timedelta
+    from sweepreader.ingest import federal_register as fr
+    payload = json.loads((FIXTURES / "federal_register_response.json").read_text())
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = payload
+    mock_resp.raise_for_status = MagicMock()
+
+    with patch("sweepreader.ingest.federal_register.httpx.get", return_value=mock_resp):
+        items = list(fr.iter_seed_items(
+            "fed_register_sro",
+            stop_before=datetime.now(timezone.utc) - timedelta(days=183)))
+
+    assert len(items) == 2
+    for it in items:  # historical reconstruction: seen-at == published-at
+        assert it.first_seen_at == it.published_at
+
+
 def test_federal_register_stable_ids():
     payload = json.loads((FIXTURES / "federal_register_response.json").read_text())
     mock_resp = MagicMock()
     mock_resp.json.return_value = payload
     mock_resp.raise_for_status = MagicMock()
-    empty = MagicMock()
-    empty.json.return_value = {"results": []}
-    empty.raise_for_status = MagicMock()
-
     def run():
-        with patch("sweepreader.ingest.federal_register.httpx.Client") as mc:
-            mock_client = MagicMock()
-            mc.return_value.__enter__.return_value = mock_client
-            mock_client.get.side_effect = [mock_resp, empty]
+        with patch("sweepreader.ingest.federal_register.httpx.get", return_value=mock_resp):
             return FederalRegisterAdapter(fr_source()).fetch()
 
     ids1 = [i.id for i in run()]

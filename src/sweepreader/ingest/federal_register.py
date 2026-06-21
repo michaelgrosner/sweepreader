@@ -1,23 +1,22 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 from datetime import datetime, timezone, timedelta
-from typing import TYPE_CHECKING
+from typing import Iterator
 
 import httpx
 
 from sweepreader.ingest.base import BaseAdapter, _USER_AGENT
 from sweepreader.store.models import Item
 
-if TYPE_CHECKING:
-    from sweepreader.config import SourceConfig
-
 logger = logging.getLogger(__name__)
 
+_BASE_URL = "https://www.federalregister.gov/api/v1/documents.json"
 _LOOKBACK_DAYS = 14
 _PER_PAGE = 40
-_MAX_PAGES = 10
+_MAX_LIVE_PAGES = 10  # the seeder pages without this cap (bounded instead by the date window)
 
 _VENUE_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r'\bCBOE\b|\bCboe\b', re.I), "CBOE"),
@@ -50,89 +49,91 @@ def _extract_venue(title: str, filing_number: str | None) -> str:
     return "SEC"
 
 
-def _truncate(text: str, max_chars: int = 8000) -> str:
-    return text[:max_chars] if len(text) > max_chars else text
+def _doc_published_at(doc: dict) -> datetime | None:
+    try:
+        return datetime.strptime(doc.get("publication_date", ""), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _doc_to_item(doc: dict, source_id: str, *, first_seen_at: datetime) -> Item:
+    url = doc.get("html_url", "")
+    filing_no = doc.get("document_number", "")
+    title = doc.get("title", "").strip()
+    abstract = doc.get("abstract") or ""
+    stable_key = filing_no or url
+    return Item(
+        id=Item.make_id(source_id, stable_key),
+        source_id=source_id,
+        venue=_extract_venue(title, filing_no),
+        title=title,
+        url=url,
+        published_at=_doc_published_at(doc) or first_seen_at,
+        first_seen_at=first_seen_at,
+        raw_text=f"{title}\n\n{abstract}"[:8000],
+        modality="api",
+        cluster_id=filing_no or None,
+    )
+
+
+def _fetch_page(page: int, *, gte_date: str, timeout: float = 30.0, cache=None) -> list[dict]:
+    params = {
+        "conditions[agencies][]": "securities-and-exchange-commission",
+        "conditions[term]": "self-regulatory",
+        "conditions[publication_date][gte]": gte_date,
+        "per_page": str(_PER_PAGE),
+        "order": "newest",
+        "page": str(page),
+        "fields[]": [
+            "document_number", "title", "html_url", "publication_date",
+            "abstract", "full_text_xml_url", "agencies", "docket_ids",
+        ],
+    }
+    headers = {"User-Agent": _USER_AGENT, "Accept-Encoding": "gzip"}
+    if cache is not None:
+        payload = json.loads(cache.fetch_text(_BASE_URL, params=params, headers=headers, timeout=timeout))
+    else:
+        resp = httpx.get(_BASE_URL, params=params, headers=headers, timeout=timeout, follow_redirects=True)
+        resp.raise_for_status()
+        payload = resp.json()
+    return payload.get("results", [])
+
+
+def iter_documents(*, stop_before: datetime, max_pages: int | None = None, cache=None) -> Iterator[dict]:
+    """Yield SRO documents newest-first back to `stop_before`. The query is also
+    bounded server-side by publication_date >= stop_before, so pagination ends
+    naturally; `max_pages` caps the live run."""
+    gte_date = stop_before.strftime("%Y-%m-%d")
+    page = 1
+    while max_pages is None or page <= max_pages:
+        results = _fetch_page(page, gte_date=gte_date, cache=cache)
+        if not results:
+            return
+        for doc in results:
+            pub = _doc_published_at(doc)
+            if pub is not None and pub < stop_before:
+                return
+            yield doc
+        if len(results) < _PER_PAGE:
+            return
+        page += 1
+
+
+def iter_seed_items(source_id: str, *, stop_before: datetime, cache=None) -> Iterator[Item]:
+    """Historical backfill: first_seen = publication date. (Federal Register
+    paginates up to ~2000 results per query; a multi-year seed would need
+    date-window chunking, but a 6-month window is well within that.)"""
+    for doc in iter_documents(stop_before=stop_before, cache=cache):
+        yield _doc_to_item(doc, source_id, first_seen_at=_doc_published_at(doc) or stop_before)
 
 
 class FederalRegisterAdapter(BaseAdapter):
-    BASE_URL = "https://www.federalregister.gov/api/v1/documents.json"
+    BASE_URL = _BASE_URL
 
     def fetch(self) -> list[Item]:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=_LOOKBACK_DAYS)
-        items: list[Item] = []
-        page = 1
-
-        with httpx.Client(
-            headers={"User-Agent": _USER_AGENT, "Accept-Encoding": "gzip"},
-            timeout=30.0,
-            follow_redirects=True,
-        ) as client:
-            while page <= _MAX_PAGES:
-                params = {
-                    "conditions[agencies][]": "securities-and-exchange-commission",
-                    "conditions[term]": "self-regulatory",
-                    "per_page": str(_PER_PAGE),
-                    "order": "newest",
-                    "page": str(page),
-                    "fields[]": [
-                        "document_number",
-                        "title",
-                        "html_url",
-                        "publication_date",
-                        "abstract",
-                        "full_text_xml_url",
-                        "agencies",
-                        "docket_ids",
-                    ],
-                }
-                resp = client.get(self.BASE_URL, params=params)
-                resp.raise_for_status()
-                data = resp.json()
-
-                results = data.get("results", [])
-                if not results:
-                    break
-
-                stop = False
-                for doc in results:
-                    pub_str = doc.get("publication_date", "")
-                    try:
-                        pub_dt = datetime.strptime(pub_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-                    except ValueError:
-                        pub_dt = datetime.now(timezone.utc)
-
-                    if pub_dt < cutoff:
-                        stop = True
-                        break
-
-                    url = doc.get("html_url", "")
-                    filing_no = doc.get("document_number", "")
-                    title = doc.get("title", "").strip()
-                    abstract = doc.get("abstract") or ""
-
-                    # Use filing number for stable ID when available
-                    stable_key = filing_no if filing_no else url
-                    item_id = Item.make_id(self.source.id, stable_key)
-
-                    venue = _extract_venue(title, filing_no)
-                    raw_text = _truncate(f"{title}\n\n{abstract}")
-
-                    item = Item(
-                        id=item_id,
-                        source_id=self.source.id,
-                        venue=venue,
-                        title=title,
-                        url=url,
-                        published_at=pub_dt,
-                        first_seen_at=datetime.now(timezone.utc),
-                        raw_text=raw_text,
-                        modality="api",
-                        cluster_id=filing_no if filing_no else None,
-                    )
-                    items.append(item)
-
-                if stop or len(results) < _PER_PAGE:
-                    break
-                page += 1
-
-        return items
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(days=_LOOKBACK_DAYS)
+        return [
+            _doc_to_item(doc, self.source.id, first_seen_at=now)
+            for doc in iter_documents(stop_before=cutoff, max_pages=_MAX_LIVE_PAGES)
+        ]

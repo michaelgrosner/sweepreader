@@ -180,14 +180,15 @@ gh run view <run-id> --repo michaelgrosner/sweepreader --log-failed
 
 **Source health is also visible** on the page footer and as a GitHub Actions failed-run email if `failures_this_run > 0`.
 
-**To seed history for backtesting:** the API/scrape sources expose deep history (NYSE back to 2006; MIAX via paged listings). Backfill it once into the append-only store so backtests have something to score. Seeded items get `first_seen_at = published_at`, so time-travel reconstructs the past faithfully.
+**To seed history for backtesting:** the API/scrape sources expose deep history (Federal Register rule filings years back; NYSE to 2006; MIAX/IEX via paged listings/APIs). Backfill it once into the append-only store so backtests have something to score. Seeded items get `first_seen_at = published_at`, so time-travel reconstructs the past faithfully.
 ```bash
 source .env
-python -m sweepreader seed --months 6                 # all seedable sources (NYSE + MIAX + IEX)
-python -m sweepreader seed --months 6 --source nyse_trader_updates   # just one source
+python -m sweepreader seed --months 6                 # all seedable sources (Federal Register + NYSE + MIAX + IEX)
+python -m sweepreader seed --months 6 --source fed_register_sro   # just one source
 ```
 - No `OPENROUTER_API_KEY` needed — `seed` only fetches/stores; classification happens later in `run`/`backtest` (only uncached items cost tokens).
-- **NYSE** is fast (one paginated JSON API, bodies inline). **MIAX** walks `?page=N` and uses *teaser-first + lazy body*: it fetches a full alert page only for items that pass a cheap keyword relevance gate (tier-E noise stays teaser-only), so a 6-month seed skips most detail fetches. Tune with `--all-bodies` (fetch everything) or `--body-min-relevance N`.
+- **Federal Register, NYSE, IEX** are fast (paginated JSON APIs, content inline). **MIAX** walks `?page=N` and uses *teaser-first + lazy body*: it fetches a full alert page only for items that pass a cheap keyword relevance gate (tier-E noise stays teaser-only), so a 6-month seed skips most detail fetches. Tune with `--all-bodies` (fetch everything) or `--body-min-relevance N`.
+- Not seedable: the plain-RSS sources (OCC, CAT, Nasdaqtrader, SEC, MEMX) expose only a recent window, and BOX's listing/feed likewise (BOX filing history is in the Federal Register).
 - Responses are cached under `.cache/http` (gitignored), so a re-run or an interrupted seed resumes without re-downloading. `--no-cache` disables it.
 - After seeding locally, `git add data/ && git push` to sync the new shards into the repo.
 
