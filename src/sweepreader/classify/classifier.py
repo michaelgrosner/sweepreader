@@ -226,6 +226,8 @@ class OpenRouterClient(LlmClient):
                                attempt + 1, item.id, content)
             except Exception as e:
                 logger.warning("LLM call failed on attempt %d for item %s: %s", attempt + 1, item.id, e)
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
 
         logger.error("LLM classification failed after retries for item %s, using keyword fallback", item.id)
         return keyword_fallback(item, config.model, config_hash)

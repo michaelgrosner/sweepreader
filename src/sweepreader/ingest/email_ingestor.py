@@ -140,7 +140,7 @@ class EmailIngestor(BaseAdapter):
                 return []
 
             uids = data[0].split()
-            uids = uids[-_MAX_FETCH:]  # newest N
+            uids = uids[:_MAX_FETCH]  # oldest N to avoid skipping items when cap is hit
 
             items: list[Item] = []
             max_uid = uid_watermark

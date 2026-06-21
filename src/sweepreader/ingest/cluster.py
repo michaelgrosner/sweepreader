@@ -74,15 +74,27 @@ def assign_clusters(items: list["Item"]) -> list["Item"]:
                 continue
             sim = _title_similarity(item_a.title, item_b.title)
             if sim >= 0.6:
-                canonical = _pick_canonical([item_a, item_b], None)
-                item_a.cluster_id = canonical
-                item_b.cluster_id = canonical
+                if item_a.cluster_id and item_b.cluster_id:
+                    # Merge clusters: set all items in the list with item_b's cluster_id to item_a's cluster_id
+                    old_id = item_b.cluster_id
+                    new_id = item_a.cluster_id
+                    for item in items:
+                        if item.cluster_id == old_id:
+                            item.cluster_id = new_id
+                elif item_a.cluster_id:
+                    item_b.cluster_id = item_a.cluster_id
+                elif item_b.cluster_id:
+                    item_a.cluster_id = item_b.cluster_id
+                else:
+                    canonical = _pick_canonical([item_a, item_b], None)
+                    item_a.cluster_id = canonical
+                    item_b.cluster_id = canonical
 
     return items
 
 
 def _has_filing(item: "Item") -> bool:
-    return bool(item.cluster_id and _FILING_RE.search(item.cluster_id or ""))
+    return _filing_number(item) is not None
 
 
 def _pick_canonical(group: list["Item"], filing_number: str | None) -> str:

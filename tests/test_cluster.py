@@ -59,3 +59,22 @@ def test_unrelated_items_not_clustered():
     assign_clusters([item_a, item_b])
     # These are unrelated (low title similarity) so should not share a cluster_id
     assert item_a.cluster_id != item_b.cluster_id or (item_a.cluster_id is None and item_b.cluster_id is None)
+
+
+def test_clustering_transitivity_and_no_splitting():
+    # item_a and item_b share "two" and "three" (similarity 2/3 = 0.66)
+    item_a = make_item("a1", "cboe_options_tech", "one two three")
+    item_b = make_item("b2", "cboe_options_tech", "two three four")
+    # item_b and item_c share "three" and "four" (similarity 2/3 = 0.66)
+    # item_a and item_c only share "three" (similarity 1/3 = 0.33)
+    item_c = make_item("c3", "cboe_options_tech", "three four five")
+
+    assign_clusters([item_a, item_b, item_c])
+
+    # All three should end up with the same cluster_id because of transitivity.
+    # Specifically, item_a and item_b cluster first, then item_b and item_c cluster.
+    # This should merge the clusters rather than splitting them.
+    assert item_a.cluster_id is not None
+    assert item_a.cluster_id == item_b.cluster_id
+    assert item_b.cluster_id == item_c.cluster_id
+

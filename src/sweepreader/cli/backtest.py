@@ -17,8 +17,11 @@ def cmd_backtest(args) -> int:
     config = load_config(args.config)
     store = Store()
 
-    from_dt = datetime.fromisoformat(args.from_date).replace(tzinfo=timezone.utc)
-    to_dt = datetime.fromisoformat(args.to_date).replace(tzinfo=timezone.utc)
+    dt_from = datetime.fromisoformat(args.from_date)
+    from_dt = dt_from.astimezone(timezone.utc) if dt_from.tzinfo else dt_from.replace(tzinfo=timezone.utc)
+
+    dt_to = datetime.fromisoformat(args.to_date)
+    to_dt = dt_to.astimezone(timezone.utc) if dt_to.tzinfo else dt_to.replace(tzinfo=timezone.utc)
 
     # Hard floor (SPEC: max_age_days): never classify/score past the max-age cutoff.
     floor = config.max_age_cutoff(to_dt)
@@ -54,7 +57,7 @@ def cmd_backtest(args) -> int:
     logger.info("Backtest: %d cached, %d newly classified", cached, new_cls)
 
     # Emit ranked results as-of the to_dt
-    classifications = store.classifications_as_of(to_dt, config.model, config_hash)
+    classifications = store.classifications_as_of(to_dt, config.model, config_hash, since=from_dt)
     visible, suppressed = rank_items(items, classifications, config, to_dt)
 
     print(f"\n=== Backtest result: {args.from_date} → {args.to_date} ===")

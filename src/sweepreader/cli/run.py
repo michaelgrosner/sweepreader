@@ -102,7 +102,7 @@ def cmd_run(args) -> int:
 
     assign_clusters(all_new_items)
 
-    existing_clss = store.classifications_as_of(now, config.model, config_hash)
+    existing_clss = store.classifications_as_of(now, config.model, config_hash, since=max_age_cutoff)
 
     new_count = 0
     for item in all_new_items:

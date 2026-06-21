@@ -18,6 +18,34 @@ def _shard_key(dt: datetime) -> str:
     return dt.strftime("%Y-%m")
 
 
+def _get_shards_in_range(directory: Path, start: datetime, end: datetime) -> list[Path]:
+    """Return sorted list of monthly shard jsonl paths in directory that cover
+    the date range [start, end]."""
+    st = start.replace(tzinfo=None) if start.tzinfo else start
+    ed = end.replace(tzinfo=None) if end.tzinfo else end
+
+    if st > ed:
+        return []
+
+    start_year, start_month = st.year, st.month
+    end_year, end_month = ed.year, ed.month
+
+    shards: list[Path] = []
+    y, m = start_year, start_month
+    while (y, m) <= (end_year, end_month):
+        filename = f"{y:04d}-{m:02d}.jsonl"
+        p = directory / filename
+        if p.exists():
+            shards.append(p)
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+
+    shards.sort()
+    return shards
+
+
 class Store:
     def __init__(self, data_dir: str | Path = "data"):
         self._data = Path(data_dir)
@@ -87,7 +115,9 @@ class Store:
 
     def items_since(self, since: datetime) -> list[Item]:
         results: list[Item] = []
-        for p in sorted(self._items_dir.glob("*.jsonl")):
+        now = datetime.now(timezone.utc)
+        shards = _get_shards_in_range(self._items_dir, since, now)
+        for p in shards:
             for line in p.read_text().splitlines():
                 line = line.strip()
                 if not line:
@@ -106,7 +136,10 @@ class Store:
         from datetime import timedelta
         window_start = cutoff - timedelta(days=days)
         results: list[Item] = []
-        for p in sorted(self._items_dir.glob("*.jsonl")):
+        w_start = window_start.replace(tzinfo=timezone.utc)
+        c_end = cutoff.replace(tzinfo=timezone.utc)
+        shards = _get_shards_in_range(self._items_dir, w_start, c_end)
+        for p in shards:
             for line in p.read_text().splitlines():
                 line = line.strip()
                 if not line:
@@ -121,10 +154,20 @@ class Store:
                     logger.warning("Corrupt item line in %s: %s", p, e)
         return results
 
-    def classifications_as_of(self, as_of: datetime, model: str, config_hash: str) -> dict[str, Classification]:
+    def classifications_as_of(
+        self,
+        as_of: datetime,
+        model: str,
+        config_hash: str,
+        since: datetime | None = None,
+    ) -> dict[str, Classification]:
         cutoff = as_of.replace(tzinfo=None) if as_of.tzinfo else as_of
         latest: dict[str, Classification] = {}
-        for p in sorted(self._class_dir.glob("*.jsonl")):
+        if since is not None:
+            shards = _get_shards_in_range(self._class_dir, since, as_of)
+        else:
+            shards = sorted(self._class_dir.glob("*.jsonl"))
+        for p in shards:
             for line in p.read_text().splitlines():
                 line = line.strip()
                 if not line:
@@ -145,7 +188,8 @@ class Store:
 
     def all_items_in_range(self, from_dt: datetime, to_dt: datetime) -> list[Item]:
         results: list[Item] = []
-        for p in sorted(self._items_dir.glob("*.jsonl")):
+        shards = _get_shards_in_range(self._items_dir, from_dt, to_dt)
+        for p in shards:
             for line in p.read_text().splitlines():
                 line = line.strip()
                 if not line:

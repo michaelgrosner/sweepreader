@@ -149,7 +149,7 @@ def iter_seed_items(source_id: str, endpoint: str, *, stop_before: datetime,
                                    alert.published_at)
             yield item
         # Pages are newest-first; once an entire page is older than the cutoff, stop.
-        if page > 0 and new_on_page == 0 and all(a.published_at < stop_before for a in alerts):
+        if new_on_page == 0 and all(a.published_at < stop_before for a in alerts):
             return
         time.sleep(sleep)
 

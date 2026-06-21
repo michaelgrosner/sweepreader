@@ -40,7 +40,7 @@ def render_page(config: "AppConfig", store: "Store", state: "StateStore") -> Non
     cutoff = now - timedelta(days=config.trailing_days)
 
     items = store.items_as_of(now, config.trailing_days)
-    classifications = store.classifications_as_of(now, config.model, config.config_hash())
+    classifications = store.classifications_as_of(now, config.model, config.config_hash(), since=cutoff)
 
     visible, suppressed = rank_items(items, classifications, config, now)
 
