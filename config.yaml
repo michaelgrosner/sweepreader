@@ -141,6 +141,28 @@ sources:
     parse: rss_generic
     enabled: true
 
+  - id: miax_options
+    modality: scrape
+    endpoint: "https://www.miaxglobal.com/markets/us-options/all-options-exchange/alerts"
+    default_tier_hint: A
+    weight: 0.95
+    parse: miax_alerts
+    enabled: true
+  - id: miax_equities
+    modality: scrape
+    endpoint: "https://www.miaxglobal.com/markets/us-equities/pearl-equities/alerts"
+    default_tier_hint: A
+    weight: 0.9
+    parse: miax_alerts
+    enabled: true
+  - id: miax_futures
+    modality: scrape
+    endpoint: "https://www.miaxglobal.com/markets/futures/miax-futures/alerts"
+    default_tier_hint: A
+    weight: 0.85
+    parse: miax_alerts
+    enabled: true
+
   - id: email_miax
     modality: email
     address: "you+miax@gmail.com"

@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 import feedparser
 import httpx
 
+from sweepreader.ingest import cboe
 from sweepreader.ingest.base import BaseAdapter, _USER_AGENT
 from sweepreader.store.models import Item
 
@@ -119,10 +120,20 @@ class RssAdapter(BaseAdapter):
                 continue
 
             title = entry.get("title", "").strip()
+            raw_text = _entry_text(entry)
+
+            # Cboe spec pages carry an empty RSS title and no body; pull the
+            # latest change-log row from the spec's revision-history page so the
+            # classifier sees a dated summary instead of just a filename.
+            if self.source.id.startswith("cboe"):
+                enriched = cboe.enrich(url)
+                if enriched is not None:
+                    title = title or enriched.spec_title or title
+                    raw_text = enriched.raw_text()
+
             if not title:
                 title = _title_from_url(url)
 
-            raw_text = _entry_text(entry)
             item_id = Item.make_id(self.source.id, url)
 
             items.append(Item(

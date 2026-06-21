@@ -9,13 +9,13 @@ from typing import Literal
 import yaml
 
 
-Modality = Literal["api", "rss", "email"]
-ParseStrategy = Literal["federal_register", "rss_generic", "email_html_or_pdf"]
+Modality = Literal["api", "rss", "email", "scrape"]
+ParseStrategy = Literal["federal_register", "rss_generic", "email_html_or_pdf", "miax_alerts"]
 TierLabel = Literal["A", "B", "C", "D", "E"]
 
 _VALID_TIERS: set[str] = {"A", "B", "C", "D", "E"}
-_VALID_MODALITIES: set[str] = {"api", "rss", "email"}
-_VALID_PARSE: set[str] = {"federal_register", "rss_generic", "email_html_or_pdf"}
+_VALID_MODALITIES: set[str] = {"api", "rss", "email", "scrape"}
+_VALID_PARSE: set[str] = {"federal_register", "rss_generic", "email_html_or_pdf", "miax_alerts"}
 
 
 @dataclass

@@ -20,18 +20,28 @@ Apply a structured tag set to each item alongside tier/relevance. The LLM would 
 
 ---
 
-## CBOE RSS PDF extraction
+## CBOE PDF spec extraction
 
-CBOE technical RSS feeds link almost entirely to PDFs (spec sheets, BOE protocol docs, etc.) rather than web pages. The current classifier only sees the filename as the title and no body text, making classification nearly blind.
+CBOE webpage spec enrichment is **✅ done** — `src/sweepreader/ingest/cboe.py`
+maps each spec-page RSS URL to its `/revision-history` page and extracts the
+latest change-log row into `raw_text` (no JS needed; the table is in the
+server-rendered React flight payload). Wired into `RssAdapter.fetch()` for
+`cboe_*` sources, with per-item isolation and feed-only fallback.
 
-**Proposed approach:**
-- In `RssAdapter.fetch()`, detect PDF links (`.pdf` extension)
-- Fetch and extract text with `pypdf` or `pdfminer.six` (first ~5 pages only — release notes are always at the front)
-- Look for a "Revision History" or "Change Log" table; extract the latest entry date and description
-- Use the extracted date as `published_at` and the change-log entry as `raw_text` for classification
-- Fall back to filename-derived title if extraction fails
+**Still open — PDF links.** Some feed entries are still direct
+`cdn.cboe.com/resources/membership/*.pdf` (e.g. futures specs), which remain
+filename-title-only, so the classifier is blind on them.
 
-This would also fix the date problem (CBOE PDFs have no `<pubDate>` in the RSS, only a file modification timestamp).
+**Proposed approach** (fallback in the same `cboe.py` module):
+- Detect `.pdf` links the existing webpage-enrichment path skips.
+- Fetch and extract text with `pypdf` or `pdfminer.six` (first ~5 pages only —
+  the revision table is at the front).
+- Parse the front-matter "Revision History" / "Change Log" table; take the
+  latest entry's date and description, mirroring the webpage path.
+- Use the change-log entry as `raw_text`; fall back to the filename-derived
+  title if extraction fails.
+- New dependency (`pypdf`/`pdfminer.six`) — confirm before adding, per the
+  minimal-deps stance in PLAN.md.
 
 ---
 

@@ -45,6 +45,9 @@ def _get_adapter(source: "SourceConfig", state: "StateStore | None" = None) -> B
     elif source.parse == "rss_generic":
         from sweepreader.ingest.rss import RssAdapter
         return RssAdapter(source)
+    elif source.parse == "miax_alerts":
+        from sweepreader.ingest.miax import MiaxAdapter
+        return MiaxAdapter(source)
     elif source.parse == "email_html_or_pdf":
         from sweepreader.ingest.email_ingestor import EmailIngestor
         return EmailIngestor(source, state)

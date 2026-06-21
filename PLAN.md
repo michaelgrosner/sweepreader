@@ -78,6 +78,8 @@ pip install -r requirements.txt
 **3.1 Per-venue HTML/PDF adapters** for any technical-notice page not covered by feed or email. One adapter per holdout, each with a recorded fixture and parse test.
 **Done when** the targeted venue's bulletins appear as items and the parse test passes against the fixture.
 
+**3.1a MIAX alerts scraper.** ✅ `src/sweepreader/ingest/miax.py` (`parse: miax_alerts`, `modality: scrape`). MIAX exposes no feed but its alert listings are plain server-rendered Drupal HTML. The adapter reads each listing page (`miax_options`/`miax_equities`/`miax_futures` in `config.yaml`), extracts per-alert URL + date (from the `/alert/YYYY/MM/DD/<slug>` path) + venue + alert-type + title from the teasers, then fetches each alert's detail page for the full body. Per-item isolation: a failed detail fetch falls back to header-only text. Repeated per-venue cross-posts share a title and merge via existing clustering. This supersedes the Tier-2 `email_miax` path (kept disabled as a fallback). 5 tests pass.
+
 ---
 
 ## Phase 4 — Feedback loop (optional)
