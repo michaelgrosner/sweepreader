@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 import feedparser
 import httpx
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
     from sweepreader.config import SourceConfig
 
 logger = logging.getLogger(__name__)
+
+_LOOKBACK_DAYS = 14
 
 _VENUE_FROM_SOURCE: dict[str, str] = {
     "cboe_options_tech": "CBOE",
@@ -53,6 +56,16 @@ def _parse_date(entry) -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _title_from_url(url: str) -> str:
+    """Extract a human-readable title from a URL when the feed provides none."""
+    path = urlparse(url).path
+    name = path.rstrip("/").split("/")[-1]
+    # Remove extension and replace separators with spaces
+    name = re.sub(r'\.[a-zA-Z0-9]+$', '', name)
+    name = re.sub(r'[-_]', ' ', name)
+    return name.strip().title() if name else url
+
+
 def _entry_text(entry) -> str:
     parts = [entry.get("title", "")]
     summary = entry.get("summary", "") or entry.get("description", "")
@@ -81,14 +94,24 @@ class RssAdapter(BaseAdapter):
 
         venue = _VENUE_FROM_SOURCE.get(self.source.id, self.source.id.upper())
         now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(days=_LOOKBACK_DAYS)
         items: list[Item] = []
 
         for entry in feed.entries:
             url = entry.get("link", "") or entry.get("id", "")
             if not url:
                 continue
-            title = entry.get("title", "").strip()
+
             pub_dt = _parse_date(entry)
+
+            # Skip items older than lookback window
+            if pub_dt < cutoff:
+                continue
+
+            title = entry.get("title", "").strip()
+            if not title:
+                title = _title_from_url(url)
+
             raw_text = _entry_text(entry)
             item_id = Item.make_id(self.source.id, url)
 

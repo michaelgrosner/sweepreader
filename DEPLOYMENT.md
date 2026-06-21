@@ -189,7 +189,7 @@ python -m sweepreader backtest --from 2026-06-01 --to 2026-06-20 --config config
 ```bash
 cp .env.example .env
 # Edit .env with real values
-source .env
+set -a && source .env && set +a   # export vars so Python subprocess sees them
 
 python -m sweepreader run            # fetch + classify + render page locally
 python -m sweepreader email --dry-run  # preview digest HTML

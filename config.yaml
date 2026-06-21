@@ -50,7 +50,7 @@ sources:
 
   - id: nasdaqtrader_options_tech
     modality: rss
-    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=optionsTechnicalAlerts"
+    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=currentheadlines&categorylist=12"
     default_tier_hint: A
     weight: 1.0
     parse: rss_generic
@@ -58,7 +58,7 @@ sources:
 
   - id: nasdaqtrader_options_reg
     modality: rss
-    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=optionsRegulatoryAlerts"
+    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=currentheadlines&categorylist=13"
     default_tier_hint: B
     weight: 1.0
     parse: rss_generic
@@ -66,7 +66,7 @@ sources:
 
   - id: nasdaqtrader_equity_tech
     modality: rss
-    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=equityTechnicalUpdates"
+    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=currentheadlines&categorylist=7"
     default_tier_hint: A
     weight: 0.9
     parse: rss_generic
@@ -74,7 +74,7 @@ sources:
 
   - id: nasdaqtrader_data_tech
     modality: rss
-    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=dataTechnicalNews"
+    endpoint: "https://www.nasdaqtrader.com/rss.aspx?feed=currentheadlines&categorylist=48"
     default_tier_hint: A
     weight: 0.95
     parse: rss_generic
@@ -90,11 +90,13 @@ sources:
 
   - id: occ_alerts
     modality: rss
+    # theocc.com/infomemo blocks bots via Akamai WAF regardless of User-Agent.
+    # Disabled until an alternative endpoint or scraper is implemented.
     endpoint: "https://infomemo.theocc.com/infomemos?format=rss"
     default_tier_hint: A
     weight: 1.0
     parse: rss_generic
-    enabled: true
+    enabled: false
 
   - id: cat_nms
     modality: rss
@@ -114,7 +116,7 @@ sources:
 
   - id: sec_press
     modality: rss
-    endpoint: "https://www.sec.gov/rss/news/press-releases.rss"
+    endpoint: "https://www.sec.gov/news/pressreleases.rss"
     default_tier_hint: B
     weight: 0.85
     parse: rss_generic

@@ -22,7 +22,7 @@ pip install -e ".[dev]"
 
 cp .env.example .env
 # Fill in .env with your keys (see .env.example)
-source .env
+set -a && source .env && set +a   # export vars so Python subprocess sees them
 
 # Fetch sources, classify new items, write data/, rebuild docs/index.html
 python -m sweepreader run
