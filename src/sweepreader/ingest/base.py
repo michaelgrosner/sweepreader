@@ -54,6 +54,9 @@ def _get_adapter(source: "SourceConfig", state: "StateStore | None" = None) -> B
     elif source.parse == "box_notices":
         from sweepreader.ingest.box import BoxAdapter
         return BoxAdapter(source)
+    elif source.parse == "iex_alerts":
+        from sweepreader.ingest.iex import IexAdapter
+        return IexAdapter(source)
     elif source.parse == "email_html_or_pdf":
         from sweepreader.ingest.email_ingestor import EmailIngestor
         return EmailIngestor(source, state)

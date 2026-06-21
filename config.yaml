@@ -207,6 +207,16 @@ sources:
     parse: email_html_or_pdf
     enabled: false
 
+  # IEX Trading Alerts: public, paginated JSON API behind notifications.iex.io.
+  # Content is inline (no detail fetch). Covers IEX Options + Equities alerts.
+  - id: iex_alerts
+    modality: api
+    endpoint: "https://api.notifications.iex.io/api/v1/public/trading-alerts"
+    default_tier_hint: A
+    weight: 0.9
+    parse: iex_alerts
+    enabled: true
+
   - id: email_iex
     modality: email
     address: "you+iex@gmail.com"
