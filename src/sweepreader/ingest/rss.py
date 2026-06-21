@@ -56,6 +56,16 @@ def _parse_date(entry) -> datetime | None:
     return None
 
 
+_DOUBLE_SCHEME = re.compile(r'^https?://[^/]+/(https?://.+)$')
+
+
+def _clean_url(url: str) -> str:
+    """Fix feedparser resolving absolute link URLs relative to a CDN base,
+    producing cdn.example.com/https://real.example.com/path."""
+    m = _DOUBLE_SCHEME.match(url)
+    return m.group(1) if m else url
+
+
 def _title_from_url(url: str) -> str:
     """Extract a human-readable title from a URL when the feed provides none."""
     path = urlparse(url).path
@@ -98,7 +108,7 @@ class RssAdapter(BaseAdapter):
         items: list[Item] = []
 
         for entry in feed.entries:
-            url = entry.get("link", "") or entry.get("id", "")
+            url = _clean_url(entry.get("link", "") or entry.get("id", ""))
             if not url:
                 continue
 
