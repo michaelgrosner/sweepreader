@@ -8,7 +8,9 @@ Step-by-step from zero to a running automated digest.
 
 - `gh` CLI installed and authenticated (`gh auth login`)
 - Python 3.12+ available
-- A Google account for the dedicated mailbox (created separately from your personal Gmail)
+- A Google account for the dedicated mailbox — needed to **send** the daily digest (SMTP) and to receive the few remaining email-only venues (BOX, IEX, 24X). MIAX and NYSE no longer need email; they're scraped/API-fetched automatically.
+
+Dependencies install from `requirements.txt` (`httpx`, `feedparser`, `PyYAML`, `Jinja2`, `selectolax`). `selectolax` ships prebuilt wheels, so no compiler is required.
 
 ---
 
@@ -89,11 +91,13 @@ gh secret set SMTP_USER        --repo michaelgrosner/sweepreader   # dedicated G
 gh secret set SMTP_PASSWORD    --repo michaelgrosner/sweepreader   # App Password from Step 4
 gh secret set SMTP_TO          --repo michaelgrosner/sweepreader --body "your.personal.email@example.com"
 
-# IMAP — same dedicated account
+# IMAP — same dedicated account (only used by the remaining email venues: BOX, IEX, 24X)
 gh secret set IMAP_HOST        --repo michaelgrosner/sweepreader --body "imap.gmail.com"
 gh secret set IMAP_USER        --repo michaelgrosner/sweepreader   # same dedicated Gmail address
 gh secret set IMAP_PASSWORD    --repo michaelgrosner/sweepreader   # same App Password
 ```
+
+The `IMAP_*` secrets are only consumed once you enable a Phase-2 email source (§7); MIAX and NYSE are now covered by the scrape/API adapters, so you can defer them if you're not wiring BOX/IEX/24X yet.
 
 `gh secret set` without `--body` will prompt you to type the value (not echoed).
 
@@ -112,7 +116,7 @@ gh workflow run "Rebuild Page" --repo michaelgrosner/sweepreader
 gh run watch --repo michaelgrosner/sweepreader
 ```
 
-This fetches all Tier-1 sources, classifies new items, commits data shards, and deploys `docs/index.html` to Pages. Expect the first run to take ~2–3 minutes.
+This fetches all enabled sources — Federal Register, Cboe (with revision-history enrichment), Nasdaqtrader, OCC, CAT, FINRA/SEC, MEMX, plus the **MIAX alert scrapers** and the **NYSE Trader Updates API** — classifies new items, commits data shards, and deploys `docs/index.html` to Pages. Expect the first run to take ~2–3 minutes.
 
 Check the live page: https://michaelgrosner.github.io/sweepreader/
 
@@ -133,12 +137,12 @@ The digest should arrive at `your.personal.email@example.com` within a minute.
 
 ## 7. Subscribe to Tier-2 venue email lists (Phase 2)
 
+> **MIAX and NYSE are already covered automatically** — MIAX by the alert scrapers (`miax_options`/`miax_equities`/`miax_futures`) and NYSE by the Trader Updates API (`nyse_trader_updates`), all enabled by default. No subscription needed. The disabled `email_miax`/`email_nyse` config entries remain only as a fallback. The email path below is just for the venues with no feed/API.
+
 Use the dedicated Gmail's `+tag` subaddresses. Emails to these addresses land in the same inbox; the `+tag` part is preserved in the `Delivered-To` header and used for source attribution.
 
 | Source | Subscribe address | Subscription page |
 |---|---|---|
-| MIAX | `yourname.sweepreader+miax@gmail.com` | miaxglobal.com → each market's Alerts page |
-| NYSE | `yourname.sweepreader+nyse@gmail.com` | nyse.com/markets/notices |
 | BOX | `yourname.sweepreader+box@gmail.com` | boxoptions.com/circulars |
 | IEX | `yourname.sweepreader+iex@gmail.com` | iextrading.com/alerts |
 | 24X | `yourname.sweepreader+24x@gmail.com` | 24xnational.com (contact/press) |
@@ -153,7 +157,7 @@ After confirming subscription emails arrive, enable each source in `config.yaml`
 Then push:
 ```bash
 git add config.yaml
-git commit -m "enable Tier-2 email sources: miax nyse box iex 24x"
+git commit -m "enable Tier-2 email sources: box iex 24x"
 git push
 ```
 
@@ -176,6 +180,17 @@ gh run view <run-id> --repo michaelgrosner/sweepreader --log-failed
 
 **Source health is also visible** on the page footer and as a GitHub Actions failed-run email if `failures_this_run > 0`.
 
+**To seed history for backtesting:** the API/scrape sources expose deep history (NYSE back to 2006; MIAX via paged listings). Backfill it once into the append-only store so backtests have something to score. Seeded items get `first_seen_at = published_at`, so time-travel reconstructs the past faithfully.
+```bash
+source .env
+python -m sweepreader seed --months 6                 # all seedable sources (NYSE + MIAX)
+python -m sweepreader seed --months 6 --source nyse_trader_updates   # just one source
+```
+- No `OPENROUTER_API_KEY` needed — `seed` only fetches/stores; classification happens later in `run`/`backtest` (only uncached items cost tokens).
+- **NYSE** is fast (one paginated JSON API, bodies inline). **MIAX** walks `?page=N` and uses *teaser-first + lazy body*: it fetches a full alert page only for items that pass a cheap keyword relevance gate (tier-E noise stays teaser-only), so a 6-month seed skips most detail fetches. Tune with `--all-bodies` (fetch everything) or `--body-min-relevance N`.
+- Responses are cached under `.cache/http` (gitignored), so a re-run or an interrupted seed resumes without re-downloading. `--no-cache` disables it.
+- After seeding locally, `git add data/ && git push` to sync the new shards into the repo.
+
 **To tune ranking:** edit `profile_prompt` or `tier_weights` in `config.yaml`, push, then backtest:
 ```bash
 source .env
@@ -196,3 +211,5 @@ python -m sweepreader email --dry-run  # preview digest HTML
 ```
 
 The `data/` directory accumulates locally the same way it does in CI. Run `git add data/ && git push` to sync local data back to the repo if you've been developing locally.
+
+The `.cache/` directory (raw HTTP responses used by the scrapers and `seed`) is **gitignored** and local-only — it's a fetch cache, not part of the committed history. Safe to delete anytime to force a refetch.
