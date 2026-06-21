@@ -8,7 +8,7 @@ Step-by-step from zero to a running automated digest.
 
 - `gh` CLI installed and authenticated (`gh auth login`)
 - Python 3.12+ available
-- A Google account for the dedicated mailbox — needed to **send** the daily digest (SMTP) and to receive the few remaining email-only venues (BOX, IEX, 24X). MIAX and NYSE no longer need email; they're scraped/API-fetched automatically.
+- A Google account for the dedicated mailbox — needed to **send** the daily digest (SMTP) and to receive the few remaining email-only venues (IEX, 24X). MIAX, NYSE, and BOX no longer need email; they're scraped/API/feed-fetched automatically.
 
 Dependencies install from `requirements.txt` (`httpx`, `feedparser`, `PyYAML`, `Jinja2`, `selectolax`). `selectolax` ships prebuilt wheels, so no compiler is required.
 
@@ -91,13 +91,13 @@ gh secret set SMTP_USER        --repo michaelgrosner/sweepreader   # dedicated G
 gh secret set SMTP_PASSWORD    --repo michaelgrosner/sweepreader   # App Password from Step 4
 gh secret set SMTP_TO          --repo michaelgrosner/sweepreader --body "your.personal.email@example.com"
 
-# IMAP — same dedicated account (only used by the remaining email venues: BOX, IEX, 24X)
+# IMAP — same dedicated account (only used by the remaining email venues: IEX, 24X)
 gh secret set IMAP_HOST        --repo michaelgrosner/sweepreader --body "imap.gmail.com"
 gh secret set IMAP_USER        --repo michaelgrosner/sweepreader   # same dedicated Gmail address
 gh secret set IMAP_PASSWORD    --repo michaelgrosner/sweepreader   # same App Password
 ```
 
-The `IMAP_*` secrets are only consumed once you enable a Phase-2 email source (§7); MIAX and NYSE are now covered by the scrape/API adapters, so you can defer them if you're not wiring BOX/IEX/24X yet.
+The `IMAP_*` secrets are only consumed once you enable a Phase-2 email source (§7); MIAX, NYSE, and BOX are now covered by the scrape/API/feed adapters, so you can defer them if you're not wiring IEX/24X yet.
 
 `gh secret set` without `--body` will prompt you to type the value (not echoed).
 
@@ -116,7 +116,7 @@ gh workflow run "Rebuild Page" --repo michaelgrosner/sweepreader
 gh run watch --repo michaelgrosner/sweepreader
 ```
 
-This fetches all enabled sources — Federal Register, Cboe (with revision-history enrichment), Nasdaqtrader, OCC, CAT, FINRA/SEC, MEMX, plus the **MIAX alert scrapers** and the **NYSE Trader Updates API** — classifies new items, commits data shards, and deploys `docs/index.html` to Pages. Expect the first run to take ~2–3 minutes.
+This fetches all enabled sources — Federal Register, Cboe (with revision-history enrichment), Nasdaqtrader, OCC, CAT, FINRA/SEC, MEMX, the **BOX notices feed**, plus the **MIAX alert scrapers** and the **NYSE Trader Updates API** — classifies new items, commits data shards, and deploys `docs/index.html` to Pages. Expect the first run to take ~2–3 minutes.
 
 Check the live page: https://michaelgrosner.github.io/sweepreader/
 
@@ -137,13 +137,12 @@ The digest should arrive at `your.personal.email@example.com` within a minute.
 
 ## 7. Subscribe to Tier-2 venue email lists (Phase 2)
 
-> **MIAX and NYSE are already covered automatically** — MIAX by the alert scrapers (`miax_options`/`miax_equities`/`miax_futures`) and NYSE by the Trader Updates API (`nyse_trader_updates`), all enabled by default. No subscription needed. The disabled `email_miax`/`email_nyse` config entries remain only as a fallback. The email path below is just for the venues with no feed/API.
+> **MIAX, NYSE, and BOX are already covered automatically** — MIAX by the alert scrapers (`miax_options`/`miax_equities`/`miax_futures`), NYSE by the Trader Updates API (`nyse_trader_updates`), and BOX by its WordPress notices RSS feed (`box_notices`), all enabled by default. No subscription needed. The disabled `email_miax`/`email_nyse`/`email_box` config entries remain only as a fallback. The email path below is just for the venues with no feed/API.
 
 Use the dedicated Gmail's `+tag` subaddresses. Emails to these addresses land in the same inbox; the `+tag` part is preserved in the `Delivered-To` header and used for source attribution.
 
 | Source | Subscribe address | Subscription page |
 |---|---|---|
-| BOX | `yourname.sweepreader+box@gmail.com` | boxoptions.com/circulars |
 | IEX | `yourname.sweepreader+iex@gmail.com` | iextrading.com/alerts |
 | 24X | `yourname.sweepreader+24x@gmail.com` | 24xnational.com (contact/press) |
 
@@ -157,7 +156,7 @@ After confirming subscription emails arrive, enable each source in `config.yaml`
 Then push:
 ```bash
 git add config.yaml
-git commit -m "enable Tier-2 email sources: box iex 24x"
+git commit -m "enable Tier-2 email sources: iex 24x"
 git push
 ```
 
