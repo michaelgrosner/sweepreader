@@ -163,6 +163,14 @@ sources:
     parse: miax_alerts
     enabled: true
 
+  - id: nyse_trader_updates
+    modality: api
+    endpoint: "https://www.nyse.com/api/notifications/public/system/1/summaries/filter"
+    default_tier_hint: A
+    weight: 0.95
+    parse: nyse_notifications
+    enabled: true
+
   - id: email_miax
     modality: email
     address: "you+miax@gmail.com"

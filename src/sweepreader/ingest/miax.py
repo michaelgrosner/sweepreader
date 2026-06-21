@@ -8,118 +8,150 @@ Drupal HTML (no JS needed). Each listing page
 renders one ``<article about="/alert/YYYY/MM/DD/<slug>">`` teaser per alert,
 carrying the alert type(s), the specific MIAX venue, and the title; the
 publication date is in the URL path. We read the listing for the item list, then
-fetch each alert's detail page for the full body to hand the classifier. This
-covers the MIAX venues that SPEC §2 otherwise routed to Tier-2 email.
+fetch each alert's detail page for the full body to hand the classifier. The
+listing paginates with ``?page=N`` (newest first), which the `seed` CLI walks for
+historical backfill (SPEC §5). This covers the MIAX venues that SPEC §2 otherwise
+routed to Tier-2 email.
 """
 from __future__ import annotations
 
-import html
 import logging
 import re
+import time
+from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
+from typing import Iterator
 
 import httpx
+from selectolax.parser import HTMLParser, Node
 
 from sweepreader.ingest.base import BaseAdapter, _USER_AGENT
+from sweepreader.ingest.html_text import html_to_text
 from sweepreader.store.models import Item
 
 logger = logging.getLogger(__name__)
 
 _BASE = "https://www.miaxglobal.com"
 _LOOKBACK_DAYS = 14
-
-# One alert teaser; captures the alert path (with the date embedded) and the block.
-_ARTICLE_RE = re.compile(
-    r'<article\b[^>]*\babout="(/alert/(\d{4})/(\d{2})/(\d{2})/[^"]+)"[^>]*>(.*?)</article>',
-    re.S,
-)
-# The full-detail article wrapping an alert's body on its own page.
-_DETAIL_RE = re.compile(r'<article\b[^>]*node--view-mode-full.*?</article>', re.S)
-_SCRIPT_STYLE_RE = re.compile(r'<(script|style|svg)\b[^>]*>.*?</\1>', re.S)
-_TAG_RE = re.compile(r'<[^>]+>')
-_WS_RE = re.compile(r'\s+')
+_ALERT_PATH_RE = re.compile(r"^/alert/(\d{4})/(\d{2})/(\d{2})/")
 
 
-def _field(block: str, cls: str) -> str:
-    """First text run inside the element bearing CSS class `cls`."""
-    m = re.search(r'class="[^"]*' + re.escape(cls) + r'[^"]*"[^>]*>([^<]*)', block)
-    return _clean(m.group(1)) if m else ""
+@dataclass(frozen=True)
+class ParsedAlert:
+    url: str
+    published_at: datetime
+    title: str
+    venue: str
+    alert_types: str
 
 
-def _clean(text: str) -> str:
-    return _WS_RE.sub(" ", html.unescape(text)).strip()
+def _text(node: Node, selector: str) -> str:
+    el = node.css_first(selector)
+    return " ".join(el.text().split()) if el else ""
 
 
-def _strip_html(fragment: str) -> str:
-    fragment = _SCRIPT_STYLE_RE.sub(" ", fragment)
-    return _clean(_TAG_RE.sub(" ", fragment))
+def _parse_article(art: Node) -> ParsedAlert | None:
+    path = (art.attributes.get("about") or "").strip()
+    m = _ALERT_PATH_RE.match(path)
+    if not m:
+        return None
+    try:
+        pub_dt = datetime(int(m[1]), int(m[2]), int(m[3]), tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    return ParsedAlert(
+        url=_BASE + path,
+        published_at=pub_dt,
+        title=_text(art, ".heading-text") or _title_from_path(path),
+        venue=_text(art, ".alert-exchange-type-items") or "MIAX",
+        alert_types=_text(art, ".alert-type-items"),
+    )
 
 
-def _detail_text(detail_html: str) -> str:
-    m = _DETAIL_RE.search(detail_html)
-    return _strip_html(m.group(0) if m else detail_html)[:8000]
+def _build_item(source_id: str, alert: ParsedAlert, body: str, first_seen_at: datetime) -> Item:
+    header = " — ".join(p for p in (alert.venue, alert.alert_types, alert.title) if p)
+    raw_text = f"{header}\n{body}"[:8000] if body else header
+    return Item(
+        id=Item.make_id(source_id, alert.url),
+        source_id=source_id,
+        venue=alert.venue,
+        title=alert.title,
+        url=alert.url,
+        published_at=alert.published_at,
+        first_seen_at=first_seen_at,
+        raw_text=raw_text,
+        modality="scrape",
+    )
+
+
+def _get(url: str, timeout: float = 30.0) -> str:
+    resp = httpx.get(
+        url,
+        headers={"User-Agent": _USER_AGENT, "Accept-Encoding": "gzip"},
+        timeout=timeout,
+        follow_redirects=True,
+    )
+    resp.raise_for_status()
+    return resp.text
+
+
+def _detail_body(url: str) -> str:
+    try:
+        tree = HTMLParser(_get(url))
+        art = tree.css_first("article.node--view-mode-full")
+        return html_to_text(art.html if art else tree.html)
+    except Exception as e:  # per-item isolation (SPEC §10)
+        logger.warning("miax detail fetch failed for %s: %s", url, e)
+        return ""
+
+
+def _parse_listing(html: str) -> list[ParsedAlert]:
+    tree = HTMLParser(html)
+    out: list[ParsedAlert] = []
+    for art in tree.css("article.node--type-alert"):
+        parsed = _parse_article(art)
+        if parsed is not None:
+            out.append(parsed)
+    return out
+
+
+def iter_seed_items(source_id: str, endpoint: str, *, stop_before: datetime,
+                    max_pages: int = 400, sleep: float = 0.3) -> Iterator[Item]:
+    """Walk listing pages newest-first, yielding items (first_seen = published)
+    until alerts predate `stop_before`. Used by the seed CLI for backtesting."""
+    seen: set[str] = set()
+    for page in range(max_pages):
+        sep = "&" if "?" in endpoint else "?"
+        alerts = _parse_listing(_get(f"{endpoint}{sep}page={page}"))
+        if not alerts:
+            return
+        new_on_page = 0
+        for alert in alerts:
+            if alert.url in seen:
+                continue
+            seen.add(alert.url)
+            if alert.published_at < stop_before:
+                continue
+            new_on_page += 1
+            yield _build_item(source_id, alert, _detail_body(alert.url), alert.published_at)
+        # Pages are newest-first; once an entire page is older than the cutoff, stop.
+        if page > 0 and new_on_page == 0 and all(a.published_at < stop_before for a in alerts):
+            return
+        time.sleep(sleep)
 
 
 class MiaxAdapter(BaseAdapter):
     def fetch(self) -> list[Item]:
-        listing = self._get(self.source.endpoint)
         now = datetime.now(timezone.utc)
         cutoff = now - timedelta(days=_LOOKBACK_DAYS)
         items: list[Item] = []
         seen: set[str] = set()
-
-        for path, yyyy, mm, dd, block in _ARTICLE_RE.findall(listing):
-            url = _BASE + path
-            if url in seen:  # the same alert can appear twice (e.g. featured + list)
+        for alert in _parse_listing(_get(self.source.endpoint)):
+            if alert.url in seen or alert.published_at < cutoff:
                 continue
-            seen.add(url)
-
-            try:
-                pub_dt = datetime(int(yyyy), int(mm), int(dd), tzinfo=timezone.utc)
-            except ValueError:
-                continue
-            if pub_dt < cutoff:
-                continue
-
-            title = _field(block, "heading-text") or _title_from_path(path)
-            venue = _field(block, "alert-exchange-type-items") or "MIAX"
-            alert_types = _field(block, "alert-type-items")
-
-            raw_text = self._detail(url)
-            header = " — ".join(p for p in (venue, alert_types, title) if p)
-            raw_text = f"{header}\n{raw_text}"[:8000] if raw_text else header
-
-            items.append(Item(
-                id=Item.make_id(self.source.id, url),
-                source_id=self.source.id,
-                venue=venue,
-                title=title,
-                url=url,
-                published_at=pub_dt,
-                first_seen_at=now,
-                raw_text=raw_text,
-                modality="scrape",
-            ))
-
+            seen.add(alert.url)
+            items.append(_build_item(self.source.id, alert, _detail_body(alert.url), now))
         return items
-
-    def _detail(self, url: str) -> str:
-        try:
-            return _detail_text(self._get(url))
-        except Exception as e:  # per-item isolation (SPEC §10): fall back to teaser-less item
-            logger.warning("miax detail fetch failed for %s: %s", url, e)
-            return ""
-
-    @staticmethod
-    def _get(url: str) -> str:
-        resp = httpx.get(
-            url,
-            headers={"User-Agent": _USER_AGENT, "Accept-Encoding": "gzip"},
-            timeout=30.0,
-            follow_redirects=True,
-        )
-        resp.raise_for_status()
-        return resp.text
 
 
 def _title_from_path(path: str) -> str:

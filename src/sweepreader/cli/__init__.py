@@ -22,6 +22,11 @@ def main():
     backtest_parser.add_argument("--to", dest="to_date", required=True, help="End date YYYY-MM-DD")
     backtest_parser.add_argument("--config", required=True, help="Candidate config file path")
 
+    seed_parser = subparsers.add_parser("seed", help="Backfill historical items for backtesting")
+    seed_parser.add_argument("--config", default="config.yaml", help="Config file path")
+    seed_parser.add_argument("--months", type=float, default=6.0, help="How far back to seed (default 6)")
+    seed_parser.add_argument("--source", default="", help="Comma-separated source ids/parse types (default: all seedable)")
+
     args = parser.parse_args()
 
     if args.command == "run":
@@ -33,3 +38,6 @@ def main():
     elif args.command == "backtest":
         from sweepreader.cli.backtest import cmd_backtest
         sys.exit(cmd_backtest(args))
+    elif args.command == "seed":
+        from sweepreader.cli.seed import cmd_seed
+        sys.exit(cmd_seed(args))

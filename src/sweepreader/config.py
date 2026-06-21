@@ -10,12 +10,16 @@ import yaml
 
 
 Modality = Literal["api", "rss", "email", "scrape"]
-ParseStrategy = Literal["federal_register", "rss_generic", "email_html_or_pdf", "miax_alerts"]
+ParseStrategy = Literal[
+    "federal_register", "rss_generic", "email_html_or_pdf", "miax_alerts", "nyse_notifications"
+]
 TierLabel = Literal["A", "B", "C", "D", "E"]
 
 _VALID_TIERS: set[str] = {"A", "B", "C", "D", "E"}
 _VALID_MODALITIES: set[str] = {"api", "rss", "email", "scrape"}
-_VALID_PARSE: set[str] = {"federal_register", "rss_generic", "email_html_or_pdf", "miax_alerts"}
+_VALID_PARSE: set[str] = {
+    "federal_register", "rss_generic", "email_html_or_pdf", "miax_alerts", "nyse_notifications"
+}
 
 
 @dataclass

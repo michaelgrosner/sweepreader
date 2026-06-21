@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 import httpx
+from selectolax.parser import HTMLParser
 
 from sweepreader.ingest.base import _USER_AGENT
 
@@ -34,13 +35,8 @@ _SPEC_URL_RE = re.compile(
 )
 # Next.js streams the page as a sequence of self.__next_f.push([1,"<chunk>"])
 # calls; the HTML we want is split across chunks, so we concatenate the decoded
-# string args back into one continuous flight stream before parsing.
+# string args back into one continuous flight stream before handing it to a parser.
 _FLIGHT_CHUNK_RE = re.compile(r'self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)')
-_REV_TABLE_RE = re.compile(r'<table class="table rev_history[^"]*".*?</table>', re.S)
-_ROW_RE = re.compile(r"<tr.*?</tr>", re.S)
-_CELL_RE = re.compile(r"<t[dh][^>]*>(.*?)</t[dh]>", re.S)
-_TAG_RE = re.compile(r"<[^>]+>")
-_TITLE_RE = re.compile(r"<title>(.*?)</title>", re.S)
 _DATE_FORMATS = ("%m/%d/%y", "%m/%d/%Y")
 
 
@@ -74,8 +70,8 @@ def _flight_text(html: str) -> str:
     return "".join(json.loads(f'"{c}"') for c in _FLIGHT_CHUNK_RE.findall(html))
 
 
-def _strip(cell: str) -> str:
-    return _TAG_RE.sub("", cell).strip()
+def _cell_text(node) -> str:
+    return " ".join(node.text().split())
 
 
 def _parse_date(value: str) -> datetime | None:
@@ -93,25 +89,22 @@ def parse_revision_history(html: str) -> CboeEnrichment | None:
     Returns None when no revision-history table is present (e.g. a spec that
     lacks one), letting the caller fall back to feed-only metadata.
     """
+    title_el = HTMLParser(html).css_first("title")
+    # "<spec> - Revision History | Cboe" -> "<spec>"
     spec_title = None
-    tm = _TITLE_RE.search(html)
-    if tm:
-        # "<spec> - Revision History | Cboe" -> "<spec>"
-        spec_title = _strip(tm.group(1)).split(" - Revision History")[0].strip() or None
+    if title_el:
+        spec_title = _cell_text(title_el).split(" - Revision History")[0].strip() or None
 
-    flight = _flight_text(html)
-    table_m = _REV_TABLE_RE.search(flight)
-    if not table_m:
+    table = HTMLParser(_flight_text(html)).css_first("table.rev_history")
+    if table is None:
         return None
 
-    rows = _ROW_RE.findall(table_m.group(0))
-    # First row is the header (Version/Date/Description); rows are oldest-first,
-    # so the last data row is the most recent revision.
-    data_rows = [r for r in rows[1:] if _CELL_RE.search(r)]
+    # Rows are oldest-first; the last row with data cells is the most recent revision.
+    data_rows = [r for r in table.css("tr") if r.css("td")]
     if not data_rows:
         return None
 
-    cells = [_strip(c) for c in _CELL_RE.findall(data_rows[-1])]
+    cells = [_cell_text(c) for c in data_rows[-1].css("td")]
     if len(cells) < 3:
         return None
 
