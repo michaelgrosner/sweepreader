@@ -560,7 +560,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
       {% if cls.summary %}<div class="card-summary">{{ cls.summary }}</div>{% endif %}
       {% if cls.tags %}<div class="card-tags">{% for tag in cls.tags %}<span class="tag-chip">{{ tag }}</span>{% endfor %}</div>{% endif %}
       <div class="card-footer-row">
-        <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }} <span class="item-id" data-id="{{ item.id }}" title="Click to copy ID">{{ item.id[:8] }}</span></div>
+        <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }} · {{ cls.model }} <span class="item-id" data-id="{{ item.id }}" title="Click to copy ID">{{ item.id[:8] }}</span></div>
         <div class="feedback-btns">
           <button class="fb-btn" data-item="{{ item.id }}" data-signal="up" title="Relevant" aria-label="Mark relevant">↑</button>
           <button class="fb-btn" data-item="{{ item.id }}" data-signal="down" title="Not relevant" aria-label="Mark not relevant">↓</button>

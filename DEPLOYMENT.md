@@ -209,6 +209,7 @@ cp .env.example .env
 set -a && source .env && set +a   # export vars so Python subprocess sees them
 
 python -m sweepreader run            # fetch + classify + render page locally
+python -m sweepreader run --render-only # rebuild webpage from local stored data (no fetch or LLM calls)
 python -m sweepreader email --dry-run  # preview digest HTML
 ```
 

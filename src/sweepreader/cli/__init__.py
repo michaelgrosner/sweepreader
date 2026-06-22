@@ -12,6 +12,7 @@ def main():
     run_parser = subparsers.add_parser("run", help="Fetch, classify, and rebuild the page")
     run_parser.add_argument("--config", default="config.yaml", help="Config file path")
     run_parser.add_argument("--dry-run", action="store_true", help="Skip writes and sends")
+    run_parser.add_argument("--render-only", action="store_true", help="Only rebuild the webpage from stored data without fetching or classifying")
 
     email_parser = subparsers.add_parser("email", help="Send daily email digest")
     email_parser.add_argument("--config", default="config.yaml", help="Config file path")

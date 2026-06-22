@@ -64,6 +64,10 @@ def cmd_run(args) -> int:
     store = Store()
     state = StateStore()
 
+    if args.render_only:
+        render_page(config, store, state)
+        return 0
+
     config_hash = config.config_hash()
     state.set("config_hash", config_hash)
 
