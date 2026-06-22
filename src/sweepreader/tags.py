@@ -9,10 +9,10 @@ from __future__ import annotations
 TAG_AXES: dict[str, list[str]] = {
     "Subject": [
         "protocol", "order-type", "connectivity", "symbology", "cert-window",
-        "new-venue", "rule-filing", "fee-change", "system-status", "margin-capital",
+        "new-venue", "rule-filing", "fee-change", "system-status",
         "surveillance",
     ],
-    "Market": ["options", "equities", "futures", "fixed-income"],
+    "Market": ["options", "equities", "futures"],
     "Action": ["deadline", "action-required", "watch"],
 }
 

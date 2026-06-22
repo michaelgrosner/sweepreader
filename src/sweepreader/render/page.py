@@ -42,6 +42,10 @@ def render_page(config: "AppConfig", store: "Store", state: "StateStore") -> Non
     items = store.items_as_of(now, config.trailing_days)
     classifications = store.classifications_as_of(now, config.model, config.config_hash(), since=cutoff)
 
+    from sweepreader.tags import ALLOWED_TAGS
+    for cls in classifications.values():
+        cls.tags = [t for t in cls.tags if t in ALLOWED_TAGS]
+
     visible, suppressed = rank_items(items, classifications, config, now)
 
     new_today = [(item, cls, score) for item, cls, score in visible if _is_today(item.published_at, now)]
