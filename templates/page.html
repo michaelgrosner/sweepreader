@@ -546,7 +546,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     <div class="tier-rail">
       <div class="tier-letter" style="color: {{ cls.tier | tier_color }}">{{ cls.tier }}</div>
       <div class="tier-meter-track">
-        <div class="tier-meter-fill" style="height: {{ cls.relevance }}%; background: {{ cls.tier | tier_color }}; opacity: 0.75;"></div>
+        <div class="tier-meter-fill" style="height: {{ score | score_pct }}%; background: {{ cls.tier | tier_color }}; opacity: 0.75;"></div>
       </div>
       <div class="tier-score">{{ cls.relevance }}</div>
     </div>
