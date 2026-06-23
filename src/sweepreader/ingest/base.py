@@ -18,6 +18,7 @@ class BaseAdapter(ABC):
     def __init__(self, source: "SourceConfig", state: "StateStore | None" = None):
         self.source = source
         self.state = state
+        self.warning: str | None = None
 
     @abstractmethod
     def fetch(self) -> list["Item"]:
@@ -27,39 +28,40 @@ class BaseAdapter(ABC):
 def fetch_source(
     source: "SourceConfig",
     state: "StateStore | None" = None,
-) -> tuple[list["Item"], Exception | None]:
+) -> tuple[list["Item"], str | None, Exception | None]:
     try:
         adapter = _get_adapter(source, state)
         items = adapter.fetch()
+        warning = getattr(adapter, "warning", None)
         logger.info("source=%s fetched %d items", source.id, len(items))
-        return items, None
+        return items, warning, None
     except Exception as e:
         logger.error("source=%s fetch error: %s", source.id, e, exc_info=True)
-        return [], e
+        return [], None, e
 
 
 def _get_adapter(source: "SourceConfig", state: "StateStore | None" = None) -> BaseAdapter:
     if source.parse == "federal_register":
         from sweepreader.ingest.federal_register import FederalRegisterAdapter
-        return FederalRegisterAdapter(source)
+        return FederalRegisterAdapter(source, state)
     elif source.parse == "rss_generic":
         from sweepreader.ingest.rss import RssAdapter
-        return RssAdapter(source)
+        return RssAdapter(source, state)
     elif source.parse == "miax_alerts":
         from sweepreader.ingest.miax import MiaxAdapter
-        return MiaxAdapter(source)
+        return MiaxAdapter(source, state)
     elif source.parse == "nyse_notifications":
         from sweepreader.ingest.nyse import NyseAdapter
-        return NyseAdapter(source)
+        return NyseAdapter(source, state)
     elif source.parse == "box_notices":
         from sweepreader.ingest.box import BoxAdapter
-        return BoxAdapter(source)
+        return BoxAdapter(source, state)
     elif source.parse == "iex_alerts":
         from sweepreader.ingest.iex import IexAdapter
-        return IexAdapter(source)
+        return IexAdapter(source, state)
     elif source.parse == "opra_notices":
         from sweepreader.ingest.opra import OpraAdapter
-        return OpraAdapter(source)
+        return OpraAdapter(source, state)
     elif source.parse == "email_html_or_pdf":
         from sweepreader.ingest.email_ingestor import EmailIngestor
         return EmailIngestor(source, state)

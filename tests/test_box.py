@@ -96,11 +96,14 @@ def test_fetch_falls_back_to_feed_on_challenge():
         return _resp(text="<html>Just a moment... challenge-platform</html>")  # Cloudflare
 
     with patch.object(box.httpx, "get", side_effect=fake_get):
-        items = BoxAdapter(_source()).fetch()
+        adapter = BoxAdapter(_source())
+        items = adapter.fetch()
 
     assert len(items) == 1
     assert items[0].title == "Feed Title Notice"
     assert items[0].venue == "BOX"
+    assert adapter.warning is not None
+    assert "Cloudflare block" in adapter.warning
 
 
 def _rfc822_now() -> str:

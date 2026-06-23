@@ -84,12 +84,17 @@ def cmd_run(args) -> int:
     for source in config.sources:
         if not source.enabled:
             continue
-        items, err = fetch_source(source, state)
+        items, warning, err = fetch_source(source, state)
         if err:
             failures += 1
             per_source_health[source.id] = {"status": "error", "error": str(err)}
             continue
-        per_source_health[source.id] = {"status": "ok", "item_count": len(items)}
+        if warning:
+            failures += 1
+            per_source_health[source.id] = {"status": "warning", "warning": warning}
+            logger.warning("source=%s fetch warning: %s", source.id, warning)
+        else:
+            per_source_health[source.id] = {"status": "ok", "item_count": len(items)}
         all_new_items.extend(items)
         logger.info("source=%s fetched %d items", source.id, len(items))
 

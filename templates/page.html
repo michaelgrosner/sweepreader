@@ -607,7 +607,9 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     <span>Window: {{ trailing_days }}d</span>
     {% for src_id, health in source_health.items() %}
     {% if health.get("status") == "error" %}
-    <span style="color:#EF4444">{{ src_id }}: error</span>
+    <span style="color:#EF4444" title="{{ health.get('error') }}">{{ src_id }}: error</span>
+    {% elif health.get("status") == "warning" %}
+    <span style="color:#F59E0B" title="{{ health.get('warning') }}">{{ src_id }}: warning</span>
     {% endif %}
     {% endfor %}
   </footer>

@@ -116,6 +116,7 @@ class BoxAdapter(BaseAdapter):
             rows = parse_listing(html)
         except Exception as e:
             logger.warning("box listing failed (%s); falling back to title-only feed", e)
+            self.warning = f"Cloudflare block or listing parse error: {e}"
             return self._fallback_feed(now, cutoff)
 
         items: list[Item] = []
