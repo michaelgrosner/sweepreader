@@ -104,13 +104,11 @@ sources:
 
   - id: occ_alerts
     modality: rss
-    # theocc.com/infomemo blocks bots via Akamai WAF regardless of User-Agent.
-    # Disabled until an alternative endpoint or scraper is implemented.
-    endpoint: "https://infomemo.theocc.com/infomemos?format=rss"
+    endpoint: "https://infomemo.theocc.com/infomemo-rss"
     default_tier_hint: A
     weight: 1.0
     parse: rss_generic
-    enabled: false
+    enabled: true
 
   - id: cat_nms
     modality: rss
