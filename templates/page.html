@@ -725,12 +725,30 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     var sig = btn.dataset.signal;
     if (fb[itemId] === sig) btn.classList.add(sig === 'up' ? 'active-up' : 'active-down');
     btn.addEventListener('click', function() {
-      fb[itemId] = sig;
+      const activeClass = sig === 'up' ? 'active-up' : 'active-down';
+      let currentSignal = sig;
+      if (btn.classList.contains(activeClass)) {
+        // Toggle off
+        delete fb[itemId];
+        btn.classList.remove(activeClass);
+        currentSignal = null;
+      } else {
+        // Toggle on
+        fb[itemId] = sig;
+        btn.parentElement.querySelectorAll('.fb-btn').forEach(function(b) {
+          b.classList.remove('active-up', 'active-down');
+        });
+        btn.classList.add(activeClass);
+      }
       localStorage.setItem('sr-feedback', JSON.stringify(fb));
-      btn.parentElement.querySelectorAll('.fb-btn').forEach(function(b) {
-        b.classList.remove('active-up', 'active-down');
-      });
-      btn.classList.add(sig === 'up' ? 'active-up' : 'active-down');
+
+      if (currentSignal) {
+        fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: itemId, signal: currentSignal })
+        }).catch(err => console.log('Static/offline mode: feedback saved to localStorage only.'));
+      }
     });
   });
 })();

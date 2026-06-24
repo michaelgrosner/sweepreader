@@ -105,10 +105,10 @@ sources:
   - id: occ_alerts
     modality: rss
     endpoint: "https://infomemo.theocc.com/infomemo-rss"
-    default_tier_hint: A
+    default_tier_hint: E
     weight: 1.0
     parse: rss_generic
-    enabled: true
+    enabled: false # nothing interesting in the last 6 months, so disabled
 
   - id: cat_nms
     modality: rss
