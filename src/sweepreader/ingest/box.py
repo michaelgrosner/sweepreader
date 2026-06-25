@@ -158,7 +158,13 @@ class BoxAdapter(BaseAdapter):
             return ""
 
     def _fallback_feed(self, now: datetime, cutoff: datetime) -> list[Item]:
-        feed = feedparser.parse(self._get(_FEED_URL))
+        try:
+            feed = feedparser.parse(self._get(_FEED_URL))
+        except Exception as e:
+            logger.warning("box fallback RSS feed also failed: %s", e)
+            self.warning = f"Both listing and fallback feed failed. Listing: {self.warning}. Feed: {e}"
+            return []
+
         items: list[Item] = []
         for entry in feed.entries:
             url = entry.get("link", "")

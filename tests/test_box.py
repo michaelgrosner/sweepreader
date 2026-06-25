@@ -109,3 +109,21 @@ def test_fetch_falls_back_to_feed_on_challenge():
 def _rfc822_now() -> str:
     from email.utils import format_datetime
     return format_datetime(datetime.now(timezone.utc))
+
+
+def test_fetch_falls_back_to_feed_and_fails():
+    def fake_get(url, *a, **k):
+        # both listing and feed raise 403 HTTPStatusError
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = box.httpx.HTTPStatusError(
+            "403 Forbidden", request=MagicMock(), response=mock_resp
+        )
+        raise mock_resp.raise_for_status.side_effect
+
+    with patch.object(box.httpx, "get", side_effect=fake_get):
+        adapter = BoxAdapter(_source())
+        items = adapter.fetch()
+
+    assert len(items) == 0
+    assert adapter.warning is not None
+    assert "Both listing and fallback feed failed" in adapter.warning
