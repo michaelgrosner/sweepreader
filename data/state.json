@@ -40,7 +40,7 @@
     },
     "cat_nms": {
       "status": "ok",
-      "item_count": 1
+      "item_count": 7
     },
     "finra_regulatory": {
       "status": "ok",
@@ -68,7 +68,7 @@
     },
     "nyse_trader_updates": {
       "status": "ok",
-      "item_count": 39
+      "item_count": 42
     },
     "box_notices": {
       "status": "warning",
