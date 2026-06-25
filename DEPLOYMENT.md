@@ -51,29 +51,19 @@ Your page URL will be: **https://michaelgrosner.github.io/sweepreader/**
 
 ## 4. Set up the dedicated Gmail account
 
-This account both **receives** venue alert emails (IMAP) and **sends** the daily digest to your personal email (SMTP). You only need one account and one App Password.
+This account **sends** the daily digest to your personal email (SMTP). You only need one account and one App Password.
 
 **Create the account:**
 1. Go to https://accounts.google.com/signup
 2. Create a new account, e.g. `yourname.sweepreader@gmail.com`
 3. Use your personal email/phone as recovery
 
-**Enable IMAP:**
-1. Open Gmail with the new account
-2. Settings (gear) → See all settings → **Forwarding and POP/IMAP** tab
-3. Under **IMAP access**: select **Enable IMAP** → Save
-
 **Generate an App Password:**
 1. Go to https://myaccount.google.com/security (logged in as the new account)
 2. Enable **2-Step Verification** if not already on
 3. Search for "App passwords" in the account settings search bar
 4. App name: `SweepReader` → **Generate**
-5. Copy the 16-character password shown (no spaces) — this is used for **both** SMTP and IMAP
-
-**Add a spam-exception filter** so venue emails aren't filtered:
-1. Gmail → Settings → Filters and blocked addresses → **Create a new filter**
-2. In **To**: `yourname.sweepreader@gmail.com`
-3. Click **Create filter** → check **Never send it to Spam** → Save
+5. Copy the 16-character password shown (no spaces) — this is used for SMTP
 
 ---
 
@@ -90,18 +80,11 @@ gh secret set SMTP_HOST        --repo michaelgrosner/sweepreader --body "smtp.gm
 gh secret set SMTP_USER        --repo michaelgrosner/sweepreader   # dedicated Gmail address
 gh secret set SMTP_PASSWORD    --repo michaelgrosner/sweepreader   # App Password from Step 4
 gh secret set SMTP_TO          --repo michaelgrosner/sweepreader --body "your.personal.email@example.com"
-
-# IMAP — same dedicated account (only used by the remaining email venue: 24X)
-gh secret set IMAP_HOST        --repo michaelgrosner/sweepreader --body "imap.gmail.com"
-gh secret set IMAP_USER        --repo michaelgrosner/sweepreader   # same dedicated Gmail address
-gh secret set IMAP_PASSWORD    --repo michaelgrosner/sweepreader   # same App Password
 ```
-
-The `IMAP_*` secrets are only consumed once you enable a Phase-2 email source (§7); MIAX, NYSE, BOX, and IEX are now covered by the scrape/API adapters, so you can defer them if you're not wiring 24X yet.
 
 `gh secret set` without `--body` will prompt you to type the value (not echoed).
 
-Verify all 8 secrets are present:
+Verify all 5 secrets are present:
 ```bash
 gh secret list --repo michaelgrosner/sweepreader
 ```
