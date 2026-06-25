@@ -76,6 +76,7 @@ def render_page(config: "AppConfig", store: "Store", state: "StateStore") -> Non
     )
     env.filters["tier_color"] = lambda t: _TIER_COLORS.get(t, "#9CA3AF")
     env.filters["score_pct"] = lambda s: min(100, int(s))
+    env.filters["is_today"] = lambda dt: _is_today(dt, now)
 
     template = env.get_template("page.html")
     html = template.render(

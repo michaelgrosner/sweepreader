@@ -213,3 +213,38 @@ def test_suppressed_not_in_main_body(tmp_dirs, monkeypatch):
     # Item should appear in suppressed section, not in cards
     assert "Trading Halt: XYZ Corp" in content
     assert "suppressed" in content.lower()
+
+
+def test_render_today_button_and_is_today_attribute(tmp_dirs, monkeypatch):
+    data_dir, docs_dir = tmp_dirs
+    store = Store(data_dir)
+    state = StateStore(data_dir)
+    config = make_config()
+
+    now = datetime.now(timezone.utc)
+    item = Item(
+        id=Item.make_id("src", "https://example.com/today"),
+        source_id="src", venue="CBOE", title="Today spec",
+        url="https://example.com/today", published_at=now, first_seen_at=now,
+        raw_text="", modality="rss",
+    )
+    cls = Classification(
+        item_id=item.id, model=config.model, config_hash="h",
+        classified_at=now, relevance=80, tier="A",
+        rationale="r", summary="A summary",
+        tags=[],
+    )
+    store.append_item(item)
+    store.append_classification(cls)
+
+    import sweepreader.render.page as page_mod
+    monkeypatch.setattr(page_mod, "_DOCS_DIR", docs_dir)
+    config.config_hash = lambda: "h"
+
+    render_page(config, store, state)
+    content = (docs_dir / "index.html").read_text()
+
+    assert 'id="scrubber-today"' in content
+    assert 'id="scrubber-week"' in content
+    assert 'data-is-today="true"' in content
+    assert 'data-published-date="' in content

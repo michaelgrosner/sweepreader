@@ -173,6 +173,22 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   cursor: pointer;
 }
 .scrubber-now-btn:hover { opacity: 0.85; }
+.scrubber-today-btn {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text2);
+  cursor: pointer;
+}
+.scrubber-today-btn:hover { border-color: var(--accent); color: var(--accent); }
+.scrubber-today-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
 /* Tag filter bar */
 .filter-bar {
@@ -520,6 +536,8 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     <span class="scrubber-label">AS OF</span>
     <input type="datetime-local" id="scrubber-input" aria-label="View as of date/time">
     <button class="scrubber-now-btn" id="scrubber-now">NOW</button>
+    <button class="scrubber-today-btn" id="scrubber-today">TODAY</button>
+    <button class="scrubber-today-btn" id="scrubber-week">WEEK</button>
   </div>
 </div>
 
@@ -542,7 +560,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
 
 <main class="main" id="main-content">
   {% macro render_card(item, cls, score) %}
-  <article class="card" data-first-seen="{{ item.first_seen_at.isoformat() }}" data-item-id="{{ item.id }}" data-tags="{{ cls.tags | join(' ') }}">
+  <article class="card" data-first-seen="{{ item.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-item-id="{{ item.id }}" data-tags="{{ cls.tags | join(' ') }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %}>
     <div class="tier-rail">
       <div class="tier-letter" style="color: {{ cls.tier | tier_color }}">{{ cls.tier }}</div>
       <div class="tier-meter-track">
@@ -592,7 +610,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     </summary>
     <ul class="suppressed-list" id="suppressed-list">
       {% for item, cls in suppressed %}
-      <li class="suppressed-item" data-first-seen="{{ item.first_seen_at.isoformat() }}" data-tags="{{ cls.tags | join(' ') }}">
+      <li class="suppressed-item" data-first-seen="{{ item.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-tags="{{ cls.tags | join(' ') }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %}>
         <span class="suppressed-venue">{{ item.venue }}</span>
         <span class="suppressed-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></span>
       </li>
@@ -637,15 +655,19 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
   });
 
   // Combined filtering: time-travel scrubber + tag facets.
-  const nowISO = "{{ now.strftime('%Y-%m-%dT%H:%M') }}";
+  const nowISO = "{{ now.strftime('%Y-%m-%dT%H:%M:%SZ') }}";
   const input = document.getElementById('scrubber-input');
   const nowBtn = document.getElementById('scrubber-now');
   const trailingMs = {{ trailing_days }} * 86400 * 1000;
 
-  input.value = nowISO;
+  input.value = "{{ now.strftime('%Y-%m-%dT%H:%M') }}";
 
   let timeCutoff = null;            // Date, or null = "now" (no time filter)
   const selected = {};             // axis -> Set(tag); within axis OR, across axes AND
+  const todayBtn = document.getElementById('scrubber-today');
+  const weekBtn = document.getElementById('scrubber-week');
+  let todayOnly = false;
+  let weekOnly = false;
 
   function toLocalDatetimeValue(isoStr) {
     if (!isoStr) return '';
@@ -671,9 +693,61 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     });
   }
 
+  function parseLocalDate(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.split('-');
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  // Check if two local date objects represent the same calendar day
+  function isLocalDateMatch(date1, date2) {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+  }
+
+  // Check if date falls in same calendar week as referenceDate (starting Sunday)
+  function isSameCalendarWeek(date, referenceDate) {
+    const refStart = new Date(referenceDate);
+    refStart.setDate(referenceDate.getDate() - referenceDate.getDay());
+    refStart.setHours(0, 0, 0, 0);
+
+    const refEnd = new Date(refStart);
+    refEnd.setDate(refStart.getDate() + 7);
+
+    return date >= refStart && date < refEnd;
+  }
+
+  function passesToday(el) {
+    if (!todayOnly) return true;
+    if (el.dataset.isToday === "true") return true;
+    if (!el.dataset.publishedDate) return false;
+
+    const cardDate = parseLocalDate(el.dataset.publishedDate);
+    if (!cardDate) return false;
+
+    const today = new Date();
+    const pageRunDate = new Date(nowISO);
+
+    return isLocalDateMatch(cardDate, today) || isLocalDateMatch(cardDate, pageRunDate);
+  }
+
+  function passesWeek(el) {
+    if (!weekOnly) return true;
+    if (!el.dataset.publishedDate) return false;
+
+    const cardDate = parseLocalDate(el.dataset.publishedDate);
+    if (!cardDate) return false;
+
+    const today = new Date();
+    const pageRunDate = new Date(nowISO);
+
+    return isSameCalendarWeek(cardDate, today) || isSameCalendarWeek(cardDate, pageRunDate);
+  }
+
   function applyFilters() {
     document.querySelectorAll('.card, .suppressed-item').forEach(function(el) {
-      el.style.display = (passesTime(el) && passesTags(el)) ? '' : 'none';
+      el.style.display = (passesTime(el) && passesTags(el) && passesToday(el) && passesWeek(el)) ? '' : 'none';
     });
     // Hide a section header when none of its cards are visible.
     document.querySelectorAll('.section-header').forEach(function(h) {
@@ -684,6 +758,12 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
       }
       h.style.display = any ? '' : 'none';
     });
+    const suppressedDetails = document.getElementById('suppressed-details');
+    if (suppressedDetails) {
+      const anySuppressedVisible = Array.from(suppressedDetails.querySelectorAll('.suppressed-item'))
+        .some(el => el.style.display !== 'none');
+      suppressedDetails.style.display = anySuppressedVisible ? '' : 'none';
+    }
   }
 
   input.addEventListener('change', function() {
@@ -695,6 +775,32 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     timeCutoff = null;
     applyFilters();
   });
+  if (todayBtn) {
+    todayBtn.addEventListener('click', function() {
+      todayOnly = !todayOnly;
+      weekOnly = false;
+      if (todayOnly) {
+        todayBtn.classList.add('active');
+        if (weekBtn) weekBtn.classList.remove('active');
+      } else {
+        todayBtn.classList.remove('active');
+      }
+      applyFilters();
+    });
+  }
+  if (weekBtn) {
+    weekBtn.addEventListener('click', function() {
+      weekOnly = !weekOnly;
+      todayOnly = false;
+      if (weekOnly) {
+        weekBtn.classList.add('active');
+        if (todayBtn) todayBtn.classList.remove('active');
+      } else {
+        weekBtn.classList.remove('active');
+      }
+      applyFilters();
+    });
+  }
 
   // Tag filter chips
   const clearBtn = document.getElementById('filter-clear');
