@@ -40,7 +40,7 @@
     },
     "cat_nms": {
       "status": "ok",
-      "item_count": 7
+      "item_count": 9
     },
     "finra_regulatory": {
       "status": "ok",
@@ -48,7 +48,7 @@
     },
     "sec_press": {
       "status": "ok",
-      "item_count": 5
+      "item_count": 4
     },
     "memx_notices": {
       "status": "ok",
@@ -68,7 +68,7 @@
     },
     "nyse_trader_updates": {
       "status": "ok",
-      "item_count": 43
+      "item_count": 42
     },
     "box_notices": {
       "status": "warning",
@@ -76,11 +76,11 @@
     },
     "iex_alerts": {
       "status": "ok",
-      "item_count": 3
+      "item_count": 4
     },
     "opra_notices": {
       "status": "ok",
-      "item_count": 2
+      "item_count": 3
     }
   }
 }
