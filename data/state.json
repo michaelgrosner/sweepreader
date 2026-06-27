@@ -1,6 +1,6 @@
 {
   "config_hash": "ac0c82a0de2ce474",
-  "failures_this_run": 2,
+  "failures_this_run": 1,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
@@ -51,8 +51,8 @@
       "item_count": 4
     },
     "memx_notices": {
-      "status": "error",
-      "error": "timed out"
+      "status": "ok",
+      "item_count": 0
     },
     "miax_options": {
       "status": "ok",
