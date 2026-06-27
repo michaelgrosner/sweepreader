@@ -63,9 +63,10 @@ jobs:
           import json, sys
           try:
               state = json.load(open('data/state.json'))
-              failures = state.get('failures_this_run', 0)
-              if failures > 0:
-                  print(f'::warning::{failures} source(s) failed this run')
+              health = state.get('source_health', {})
+              errors = sum(1 for src in health.values() if src.get('status') == 'error')
+              if errors > 0:
+                  print(f'::warning::{errors} source(s) failed with critical errors this run')
                   sys.exit(1)
           except FileNotFoundError:
               pass
