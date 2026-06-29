@@ -12,7 +12,7 @@
     },
     "cboe_equities_tech": {
       "status": "ok",
-      "item_count": 4
+      "item_count": 9
     },
     "cboe_futures_tech": {
       "status": "ok",
@@ -68,7 +68,7 @@
     },
     "nyse_trader_updates": {
       "status": "ok",
-      "item_count": 41
+      "item_count": 42
     },
     "box_notices": {
       "status": "warning",
