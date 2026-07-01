@@ -8,15 +8,15 @@
     },
     "cboe_options_tech": {
       "status": "ok",
-      "item_count": 10
+      "item_count": 29
     },
     "cboe_equities_tech": {
       "status": "ok",
-      "item_count": 10
+      "item_count": 29
     },
     "cboe_futures_tech": {
       "status": "ok",
-      "item_count": 10
+      "item_count": 29
     },
     "nasdaqtrader_options_tech": {
       "status": "ok",
