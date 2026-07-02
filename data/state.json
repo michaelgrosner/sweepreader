@@ -4,11 +4,11 @@
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
-      "item_count": 62
+      "item_count": 70
     },
     "cboe_options_tech": {
       "status": "ok",
-      "item_count": 28
+      "item_count": 9
     },
     "cboe_equities_tech": {
       "status": "ok",
@@ -16,7 +16,7 @@
     },
     "cboe_futures_tech": {
       "status": "ok",
-      "item_count": 28
+      "item_count": 9
     },
     "nasdaqtrader_options_tech": {
       "status": "ok",
@@ -68,7 +68,7 @@
     },
     "nyse_trader_updates": {
       "status": "ok",
-      "item_count": 44
+      "item_count": 46
     },
     "box_notices": {
       "status": "warning",
