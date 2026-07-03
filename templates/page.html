@@ -522,7 +522,13 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     <div class="coverage-strip">{{ coverage_codes | join(' · ') }}</div>
     <div class="header-controls">
       {% if failures > 0 %}
-      <div class="health-pill error" title="{{ failures }} source(s) failed">⚠ {{ failures }} err</div>
+      {% set failure_lines = [] %}
+      {% for src_id, health in source_health.items() %}
+      {% if health.get("status") in ("error", "warning") %}
+      {% set _ = failure_lines.append(src_id ~ ": " ~ (health.get("error") or health.get("warning") or health.get("status"))) %}
+      {% endif %}
+      {% endfor %}
+      <div class="health-pill error" title="{{ failure_lines | join('\n') }}">⚠ {{ failures }} err</div>
       {% else %}
       <div class="health-pill">● live</div>
       {% endif %}
