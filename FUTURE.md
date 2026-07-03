@@ -52,11 +52,3 @@ filename-title-only, so the classifier is blind on them.
   title if extraction fails.
 - No new dependency needed — `pypdf` and `pdf_to_text` already exist.
 
----
-
-## Feedback / voting
-
-Up/down buttons currently write to `data/feedback/YYYY-MM.jsonl` but the data is never read back. Options:
-- Feed votes into a per-item score adjustment (decay positive signal, boost negative)
-- Use accumulated feedback to fine-tune the profile prompt automatically
-- Expose a `backtest --with-feedback` mode that re-ranks using stored signals

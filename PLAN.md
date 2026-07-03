@@ -96,11 +96,9 @@ pip install -r requirements.txt
 
 ---
 
-## Phase 4 — Feedback loop (optional)
+## Phase 4 — Feedback loop (removed)
 
-**4.1 Capture feedback.** ✅ `src/sweepreader/store/feedback.py` — `FeedbackStore.record()` appends `{item_id, signal, config_hash, ts}` to month-sharded JSONL. Page template has thumbs up/down buttons on each card persisted to `localStorage`. ⚠️ *GitHub Pages is static — localStorage is client-only; to persist to the repo would require a GitHub Actions form trigger or separate service. Review feedback by exporting localStorage JSON manually.*
-
-**4.2 Use it to tune.** Review `localStorage` feedback periodically, adjust `profile_prompt` or `tier_weights` in `config.yaml`, run `python -m sweepreader backtest --from YYYY-MM-DD --to YYYY-MM-DD --config config.yaml` to validate ranking diff before committing.
+Thumbs up/down buttons and the `FeedbackStore`/`serve` command were removed to keep the page a pure static artifact with no server dependency.
 
 ---
 

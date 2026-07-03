@@ -459,27 +459,6 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
 }
 .suppressed-title a { color: var(--text2); }
 
-.card-footer-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.feedback-btns { display: flex; gap: 4px; }
-.fb-btn {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 6px;
-  font-size: 0.7rem;
-  cursor: pointer;
-  color: var(--text3);
-  line-height: 1.4;
-}
-.fb-btn:hover { border-color: var(--accent); color: var(--accent); }
-.fb-btn.active-up { border-color: #22C55E; color: #22C55E; }
-.fb-btn.active-down { border-color: #EF4444; color: #EF4444; }
-
 /* Footer */
 .footer {
   margin-top: 40px;
@@ -583,13 +562,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
       <div class="card-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></div>
       {% if cls.summary %}<div class="card-summary">{{ cls.summary }}</div>{% endif %}
       {% if cls.tags %}<div class="card-tags">{% for tag in cls.tags %}<span class="tag-chip">{{ tag }}</span>{% endfor %}</div>{% endif %}
-      <div class="card-footer-row">
-        <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }} · {{ cls.model }} <span class="item-id" data-id="{{ item.id }}" title="Click to copy ID">{{ item.id[:8] }}</span></div>
-        <div class="feedback-btns">
-          <button class="fb-btn" data-item="{{ item.id }}" data-signal="up" title="Relevant" aria-label="Mark relevant">↑</button>
-          <button class="fb-btn" data-item="{{ item.id }}" data-signal="down" title="Not relevant" aria-label="Mark not relevant">↓</button>
-        </div>
-      </div>
+      <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }} · {{ cls.model }} <span class="item-id" data-id="{{ item.id }}" title="Click to copy ID">{{ item.id[:8] }}</span></div>
     </div>
   </article>
   {% endmacro %}
@@ -828,40 +801,6 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     document.querySelectorAll('.filter-chip.active').forEach(c => c.classList.remove('active'));
     updateClear();
     applyFilters();
-  });
-
-  // Feedback — persisted in localStorage; a CI job can read exported feedback JSON
-  var fb = JSON.parse(localStorage.getItem('sr-feedback') || '{}');
-  document.querySelectorAll('.fb-btn').forEach(function(btn) {
-    var itemId = btn.dataset.item;
-    var sig = btn.dataset.signal;
-    if (fb[itemId] === sig) btn.classList.add(sig === 'up' ? 'active-up' : 'active-down');
-    btn.addEventListener('click', function() {
-      const activeClass = sig === 'up' ? 'active-up' : 'active-down';
-      let currentSignal = sig;
-      if (btn.classList.contains(activeClass)) {
-        // Toggle off
-        delete fb[itemId];
-        btn.classList.remove(activeClass);
-        currentSignal = null;
-      } else {
-        // Toggle on
-        fb[itemId] = sig;
-        btn.parentElement.querySelectorAll('.fb-btn').forEach(function(b) {
-          b.classList.remove('active-up', 'active-down');
-        });
-        btn.classList.add(activeClass);
-      }
-      localStorage.setItem('sr-feedback', JSON.stringify(fb));
-
-      if (currentSignal) {
-        fetch('/api/feedback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ item_id: itemId, signal: currentSignal })
-        }).catch(err => console.log('Static/offline mode: feedback saved to localStorage only.'));
-      }
-    });
   });
 })();
 </script>

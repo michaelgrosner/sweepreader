@@ -220,7 +220,7 @@ GitHub Pages. The page carries only public regulatory content and non-sensitive 
 1. **Phase 1 — structured core (working product):** Federal Register API + Cboe/Nasdaqtrader/OCC/CAT/MEMX RSS + FINRA/SEC RSS → classify via OpenRouter → render page (with time-travel) + send email; append-only sharded history.
 2. **Phase 2 — email ingestion:** dedicated Gmail + `EmailIngestor` for MIAX, NYSE, BOX, IEX, 24X.
 3. **Phase 3 — scrapers:** any technical-notice pages not covered by feed or email.
-4. **Phase 4 — feedback loop (optional):** thumbs up/down → feedback file → prompt/weight tuning.
+4. **Phase 4 — feedback loop (removed):** thumbs up/down buttons and server-side recording were removed; the page is a pure static artifact with no server dependency.
 
 Backtest (§5) is available from Phase 1 onward.
 

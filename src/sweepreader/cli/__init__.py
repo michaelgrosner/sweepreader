@@ -33,9 +33,6 @@ def main():
     seed_parser.add_argument("--body-min-relevance", type=int, default=0,
                              help="MIAX: only fetch detail bodies for teasers scoring >= this (keyword gate; tier-E noise always skipped)")
 
-    serve_parser = subparsers.add_parser("serve", help="Serve the static webpage locally and record feedback")
-    serve_parser.add_argument("--port", type=int, default=8000, help="Port to serve on (default: 8000)")
-
     args = parser.parse_args()
 
     if args.command == "run":
@@ -50,6 +47,3 @@ def main():
     elif args.command == "seed":
         from sweepreader.cli.seed import cmd_seed
         sys.exit(cmd_seed(args))
-    elif args.command == "serve":
-        from sweepreader.cli.serve import cmd_serve
-        sys.exit(cmd_serve(args))

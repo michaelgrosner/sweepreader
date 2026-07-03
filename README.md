@@ -96,7 +96,6 @@ Classify (OpenRouterClient → Classification)
 Store (append-only JSONL, month-sharded)
   ├── data/items/YYYY-MM.jsonl
   ├── data/classifications/YYYY-MM.jsonl
-  ├── data/feedback/YYYY-MM.jsonl
   └── data/state.json  (watermarks, health, last_email_sent_at)
     │
     ▼
@@ -130,4 +129,3 @@ Add an entry to `sources:` in `config.yaml`. No code change needed for RSS or AP
 - **Phase 1 (done):** Federal Register + Cboe/Nasdaq/OCC/CAT/FINRA/SEC/MEMX RSS → classify → page + email
 - **Phase 2 (done, awaiting Gmail setup):** IMAP email ingestion for MIAX, NYSE, BOX, IEX, 24X
 - **Phase 3:** Per-venue HTML scrapers if any gap remains after Phase 2
-- **Phase 4 (done, client-side only):** Feedback buttons on page; server-side persistence would require a separate endpoint
