@@ -1,6 +1,6 @@
 {
   "config_hash": "ac0c82a0de2ce474",
-  "failures_this_run": 1,
+  "failures_this_run": 2,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
@@ -67,8 +67,8 @@
       "item_count": 8
     },
     "nyse_trader_updates": {
-      "status": "ok",
-      "item_count": 43
+      "status": "error",
+      "error": "The read operation timed out"
     },
     "box_notices": {
       "status": "warning",
