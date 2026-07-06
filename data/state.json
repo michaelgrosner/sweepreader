@@ -1,6 +1,6 @@
 {
   "config_hash": "ac0c82a0de2ce474",
-  "failures_this_run": 1,
+  "failures_this_run": 2,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
@@ -12,7 +12,7 @@
     },
     "cboe_equities_tech": {
       "status": "ok",
-      "item_count": 29
+      "item_count": 39
     },
     "cboe_futures_tech": {
       "status": "ok",
@@ -40,7 +40,7 @@
     },
     "cat_nms": {
       "status": "ok",
-      "item_count": 11
+      "item_count": 10
     },
     "finra_regulatory": {
       "status": "ok",
@@ -60,15 +60,15 @@
     },
     "miax_equities": {
       "status": "ok",
-      "item_count": 2
+      "item_count": 3
     },
     "miax_futures": {
       "status": "ok",
       "item_count": 8
     },
     "nyse_trader_updates": {
-      "status": "ok",
-      "item_count": 43
+      "status": "error",
+      "error": "Client error '403 Forbidden' for url 'https://www.nyse.com/api/notifications/public/system/1/summaries/filter?pageSize=50&pageNumber=0&sortKey=publishedDate&sortOrder=desc'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
     },
     "box_notices": {
       "status": "warning",
@@ -76,7 +76,7 @@
     },
     "iex_alerts": {
       "status": "ok",
-      "item_count": 4
+      "item_count": 3
     },
     "opra_notices": {
       "status": "ok",
