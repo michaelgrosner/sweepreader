@@ -1,10 +1,10 @@
 {
   "config_hash": "ac0c82a0de2ce474",
-  "failures_this_run": 2,
+  "failures_this_run": 1,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
-      "item_count": 84
+      "item_count": 72
     },
     "cboe_options_tech": {
       "status": "ok",
@@ -60,15 +60,15 @@
     },
     "miax_equities": {
       "status": "ok",
-      "item_count": 3
+      "item_count": 2
     },
     "miax_futures": {
       "status": "ok",
       "item_count": 8
     },
     "nyse_trader_updates": {
-      "status": "error",
-      "error": "Server error '522 <none>' for url 'https://www.nyse.com/api/notifications/public/system/1/summaries/filter?pageSize=50&pageNumber=0&sortKey=publishedDate&sortOrder=desc'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/522"
+      "status": "ok",
+      "item_count": 43
     },
     "box_notices": {
       "status": "warning",
@@ -80,7 +80,7 @@
     },
     "opra_notices": {
       "status": "ok",
-      "item_count": 2
+      "item_count": 1
     }
   }
 }
