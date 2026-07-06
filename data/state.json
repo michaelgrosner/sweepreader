@@ -1,6 +1,6 @@
 {
   "config_hash": "ac0c82a0de2ce474",
-  "failures_this_run": 2,
+  "failures_this_run": 1,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
@@ -8,7 +8,7 @@
     },
     "cboe_options_tech": {
       "status": "ok",
-      "item_count": 29
+      "item_count": 39
     },
     "cboe_equities_tech": {
       "status": "ok",
@@ -16,7 +16,7 @@
     },
     "cboe_futures_tech": {
       "status": "ok",
-      "item_count": 29
+      "item_count": 39
     },
     "nasdaqtrader_options_tech": {
       "status": "ok",
@@ -40,7 +40,7 @@
     },
     "cat_nms": {
       "status": "ok",
-      "item_count": 10
+      "item_count": 11
     },
     "finra_regulatory": {
       "status": "ok",
@@ -48,7 +48,7 @@
     },
     "sec_press": {
       "status": "ok",
-      "item_count": 4
+      "item_count": 5
     },
     "memx_notices": {
       "status": "ok",
@@ -67,8 +67,8 @@
       "item_count": 8
     },
     "nyse_trader_updates": {
-      "status": "error",
-      "error": "Client error '403 Forbidden' for url 'https://www.nyse.com/api/notifications/public/system/1/summaries/filter?pageSize=50&pageNumber=0&sortKey=publishedDate&sortOrder=desc'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+      "status": "ok",
+      "item_count": 43
     },
     "box_notices": {
       "status": "warning",
