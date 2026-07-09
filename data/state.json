@@ -64,11 +64,11 @@
     },
     "miax_futures": {
       "status": "ok",
-      "item_count": 4
+      "item_count": 5
     },
     "nyse_trader_updates": {
       "status": "ok",
-      "item_count": 42
+      "item_count": 40
     },
     "box_notices": {
       "status": "warning",
