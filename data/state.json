@@ -40,7 +40,7 @@
     },
     "cat_nms": {
       "status": "ok",
-      "item_count": 11
+      "item_count": 5
     },
     "finra_regulatory": {
       "status": "ok",
@@ -60,11 +60,11 @@
     },
     "miax_equities": {
       "status": "ok",
-      "item_count": 4
+      "item_count": 5
     },
     "miax_futures": {
       "status": "ok",
-      "item_count": 3
+      "item_count": 4
     },
     "nyse_trader_updates": {
       "status": "ok",
