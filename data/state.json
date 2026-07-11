@@ -4,7 +4,7 @@
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
-      "item_count": 65
+      "item_count": 75
     },
     "cboe_options_tech": {
       "status": "ok",
