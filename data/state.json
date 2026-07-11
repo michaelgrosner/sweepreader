@@ -1,6 +1,6 @@
 {
   "config_hash": "ac0c82a0de2ce474",
-  "failures_this_run": 2,
+  "failures_this_run": 1,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
@@ -28,7 +28,7 @@
     },
     "nasdaqtrader_equity_tech": {
       "status": "ok",
-      "item_count": 1
+      "item_count": 0
     },
     "nasdaqtrader_data_tech": {
       "status": "ok",
@@ -47,8 +47,8 @@
       "item_count": 0
     },
     "sec_press": {
-      "status": "error",
-      "error": "Server error '503 Service Unavailable' for url 'https://www.sec.gov/news/pressreleases.rss'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+      "status": "ok",
+      "item_count": 7
     },
     "memx_notices": {
       "status": "ok",
@@ -76,7 +76,7 @@
     },
     "iex_alerts": {
       "status": "ok",
-      "item_count": 1
+      "item_count": 2
     },
     "opra_notices": {
       "status": "ok",
