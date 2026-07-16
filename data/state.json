@@ -1,6 +1,6 @@
 {
   "config_hash": "ac0c82a0de2ce474",
-  "failures_this_run": 1,
+  "failures_this_run": 2,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
@@ -8,15 +8,15 @@
     },
     "cboe_options_tech": {
       "status": "ok",
-      "item_count": 13
+      "item_count": 12
     },
     "cboe_equities_tech": {
       "status": "ok",
-      "item_count": 13
+      "item_count": 12
     },
     "cboe_futures_tech": {
       "status": "ok",
-      "item_count": 13
+      "item_count": 12
     },
     "nasdaqtrader_options_tech": {
       "status": "ok",
@@ -51,8 +51,8 @@
       "item_count": 5
     },
     "memx_notices": {
-      "status": "ok",
-      "item_count": 0
+      "status": "error",
+      "error": "timed out"
     },
     "miax_options": {
       "status": "ok",
