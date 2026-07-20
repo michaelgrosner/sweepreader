@@ -32,7 +32,7 @@
     },
     "nasdaqtrader_data_tech": {
       "status": "ok",
-      "item_count": 1
+      "item_count": 3
     },
     "nasdaqtrader_halt": {
       "status": "ok",
@@ -40,7 +40,7 @@
     },
     "cat_nms": {
       "status": "ok",
-      "item_count": 4
+      "item_count": 3
     },
     "finra_regulatory": {
       "status": "ok",
