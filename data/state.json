@@ -48,7 +48,7 @@
     },
     "sec_press": {
       "status": "ok",
-      "item_count": 6
+      "item_count": 5
     },
     "memx_notices": {
       "status": "ok",
@@ -60,7 +60,7 @@
     },
     "miax_equities": {
       "status": "ok",
-      "item_count": 5
+      "item_count": 6
     },
     "miax_futures": {
       "status": "ok",
