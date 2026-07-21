@@ -32,7 +32,7 @@
     },
     "nasdaqtrader_data_tech": {
       "status": "ok",
-      "item_count": 3
+      "item_count": 2
     },
     "nasdaqtrader_halt": {
       "status": "ok",
@@ -68,7 +68,7 @@
     },
     "nyse_trader_updates": {
       "status": "ok",
-      "item_count": 39
+      "item_count": 38
     },
     "box_notices": {
       "status": "warning",
