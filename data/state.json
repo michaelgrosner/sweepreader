@@ -1,22 +1,22 @@
 {
   "config_hash": "ac0c82a0de2ce474",
-  "failures_this_run": 1,
+  "failures_this_run": 4,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
       "item_count": 82
     },
     "cboe_options_tech": {
-      "status": "ok",
-      "item_count": 8
+      "status": "error",
+      "error": "Client error '403 Forbidden' for url 'https://www.cboe.com/us/options/support/technical/rss'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
     },
     "cboe_equities_tech": {
-      "status": "ok",
-      "item_count": 8
+      "status": "error",
+      "error": "Client error '403 Forbidden' for url 'https://www.cboe.com/us/equities/support/technical/rss'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
     },
     "cboe_futures_tech": {
-      "status": "ok",
-      "item_count": 8
+      "status": "error",
+      "error": "Client error '403 Forbidden' for url 'https://www.cboe.com/us/futures/support/technical/rss'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
     },
     "nasdaqtrader_options_tech": {
       "status": "ok",
@@ -48,7 +48,7 @@
     },
     "sec_press": {
       "status": "ok",
-      "item_count": 4
+      "item_count": 3
     },
     "memx_notices": {
       "status": "ok",
