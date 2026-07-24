@@ -16,7 +16,7 @@
     },
     "cboe_futures_tech": {
       "status": "ok",
-      "item_count": 12
+      "item_count": 16
     },
     "nasdaqtrader_options_tech": {
       "status": "ok",
@@ -40,7 +40,7 @@
     },
     "cat_nms": {
       "status": "ok",
-      "item_count": 4
+      "item_count": 5
     },
     "finra_regulatory": {
       "status": "ok",
@@ -68,7 +68,7 @@
     },
     "nyse_trader_updates": {
       "status": "ok",
-      "item_count": 34
+      "item_count": 35
     },
     "box_notices": {
       "status": "warning",
