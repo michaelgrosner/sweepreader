@@ -32,7 +32,7 @@
     },
     "nasdaqtrader_data_tech": {
       "status": "ok",
-      "item_count": 1
+      "item_count": 0
     },
     "nasdaqtrader_halt": {
       "status": "ok",
@@ -76,7 +76,7 @@
     },
     "iex_alerts": {
       "status": "ok",
-      "item_count": 2
+      "item_count": 3
     },
     "opra_notices": {
       "status": "ok",
