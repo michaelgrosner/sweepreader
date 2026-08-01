@@ -1,6 +1,6 @@
 {
   "config_hash": "ac0c82a0de2ce474",
-  "failures_this_run": 1,
+  "failures_this_run": 6,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
@@ -19,24 +19,24 @@
       "item_count": 18
     },
     "nasdaqtrader_options_tech": {
-      "status": "ok",
-      "item_count": 0
+      "status": "error",
+      "error": "Exceeded maximum allowed redirects."
     },
     "nasdaqtrader_options_reg": {
-      "status": "ok",
-      "item_count": 0
+      "status": "error",
+      "error": "Exceeded maximum allowed redirects."
     },
     "nasdaqtrader_equity_tech": {
-      "status": "ok",
-      "item_count": 0
+      "status": "error",
+      "error": "Exceeded maximum allowed redirects."
     },
     "nasdaqtrader_data_tech": {
-      "status": "ok",
-      "item_count": 0
+      "status": "error",
+      "error": "Exceeded maximum allowed redirects."
     },
     "nasdaqtrader_halt": {
-      "status": "ok",
-      "item_count": 0
+      "status": "error",
+      "error": "Exceeded maximum allowed redirects."
     },
     "cat_nms": {
       "status": "ok",
