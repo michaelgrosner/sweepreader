@@ -48,7 +48,7 @@
     },
     "sec_press": {
       "status": "ok",
-      "item_count": 3
+      "item_count": 2
     },
     "memx_notices": {
       "status": "ok",
@@ -76,7 +76,7 @@
     },
     "iex_alerts": {
       "status": "ok",
-      "item_count": 5
+      "item_count": 6
     },
     "opra_notices": {
       "status": "ok",
