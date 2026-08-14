@@ -4,7 +4,7 @@
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
-      "item_count": 49
+      "item_count": 55
     },
     "cboe_options_tech": {
       "status": "ok",
@@ -12,11 +12,11 @@
     },
     "cboe_equities_tech": {
       "status": "ok",
-      "item_count": 9
+      "item_count": 10
     },
     "cboe_futures_tech": {
       "status": "ok",
-      "item_count": 9
+      "item_count": 10
     },
     "nasdaqtrader_options_tech": {
       "status": "ok",
