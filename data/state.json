@@ -12,11 +12,11 @@
     },
     "cboe_equities_tech": {
       "status": "ok",
-      "item_count": 10
+      "item_count": 9
     },
     "cboe_futures_tech": {
       "status": "ok",
-      "item_count": 10
+      "item_count": 9
     },
     "nasdaqtrader_options_tech": {
       "status": "ok",
@@ -48,7 +48,7 @@
     },
     "sec_press": {
       "status": "ok",
-      "item_count": 3
+      "item_count": 4
     },
     "memx_notices": {
       "status": "ok",
@@ -60,15 +60,15 @@
     },
     "miax_equities": {
       "status": "ok",
-      "item_count": 5
+      "item_count": 6
     },
     "miax_futures": {
       "status": "ok",
-      "item_count": 6
+      "item_count": 8
     },
     "nyse_trader_updates": {
       "status": "ok",
-      "item_count": 32
+      "item_count": 30
     },
     "box_notices": {
       "status": "warning",
@@ -76,7 +76,7 @@
     },
     "iex_alerts": {
       "status": "ok",
-      "item_count": 5
+      "item_count": 4
     },
     "opra_notices": {
       "status": "ok",
