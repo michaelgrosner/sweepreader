@@ -1,6 +1,6 @@
 {
   "config_hash": "ac0c82a0de2ce474",
-  "failures_this_run": 2,
+  "failures_this_run": 1,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
@@ -32,7 +32,7 @@
     },
     "nasdaqtrader_data_tech": {
       "status": "ok",
-      "item_count": 1
+      "item_count": 0
     },
     "nasdaqtrader_halt": {
       "status": "ok",
@@ -51,8 +51,8 @@
       "item_count": 4
     },
     "memx_notices": {
-      "status": "error",
-      "error": "timed out"
+      "status": "ok",
+      "item_count": 0
     },
     "miax_options": {
       "status": "ok",
@@ -68,7 +68,7 @@
     },
     "nyse_trader_updates": {
       "status": "ok",
-      "item_count": 30
+      "item_count": 31
     },
     "box_notices": {
       "status": "warning",
