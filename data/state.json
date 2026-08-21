@@ -4,7 +4,7 @@
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
-      "item_count": 66
+      "item_count": 60
     },
     "cboe_options_tech": {
       "status": "ok",
@@ -39,20 +39,20 @@
       "item_count": 0
     },
     "cat_nms": {
-      "status": "ok",
-      "item_count": 8
+      "status": "error",
+      "error": "Client error '403 Forbidden' for url 'https://www.catnmsplan.com/rss/topics.xml'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
     },
     "finra_regulatory": {
-      "status": "ok",
-      "item_count": 0
+      "status": "error",
+      "error": "Client error '403 Forbidden' for url 'https://www.finra.org/rules-guidance/notices/rss'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
     },
     "sec_press": {
       "status": "ok",
       "item_count": 5
     },
     "memx_notices": {
-      "status": "error",
-      "error": "timed out"
+      "status": "ok",
+      "item_count": 0
     },
     "miax_options": {
       "status": "ok",
@@ -67,8 +67,8 @@
       "item_count": 5
     },
     "nyse_trader_updates": {
-      "status": "error",
-      "error": "Client error '403 Forbidden' for url 'https://www.nyse.com/api/notifications/public/system/1/summaries/filter?pageSize=50&pageNumber=0&sortKey=publishedDate&sortOrder=desc'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+      "status": "ok",
+      "item_count": 36
     },
     "box_notices": {
       "status": "warning",
