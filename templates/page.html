@@ -256,6 +256,44 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   letter-spacing: 0.03em;
 }
 
+/* Grouped cards: one card per event, one linked chip per market it was posted to.
+   Visually distinct from tag chips so market coverage is not mistaken for a
+   filterable tag. */
+.card-markets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.market-chip {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text2);
+  border: 1px dashed var(--border);
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.market-chip:hover {
+  border-color: var(--accent);
+  border-style: solid;
+  color: var(--accent);
+  text-decoration: none;
+}
+.suppressed-markets { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; }
+.group-badge {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--surface2);
+  color: var(--text3);
+  border: 1px solid var(--border);
+}
+
 /* Main content */
 .main {
   max-width: 900px;
@@ -544,8 +582,9 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
 {% endif %}
 
 <main class="main" id="main-content">
-  {% macro render_card(item, cls, score) %}
-  <article class="card" data-first-seen="{{ item.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-item-id="{{ item.id }}" data-tags="{{ cls.tags | join(' ') }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %}>
+  {% macro render_card(card) %}
+  {% set item = card.item %}{% set cls = card.cls %}{% set score = card.score %}
+  <article class="card{% if card.is_group %} card-grouped{% endif %}" data-first-seen="{{ card.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-item-id="{{ item.id }}" data-tags="{{ card.tags | join(' ') }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %}>
     <div class="tier-rail">
       <div class="tier-letter" style="color: {{ cls.tier | tier_color }}">{{ cls.tier }}</div>
       <div class="tier-meter-track">
@@ -557,11 +596,17 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
       <div class="card-meta">
         <span class="venue-tag">{{ item.venue }}</span>
         <span class="card-ts">{{ item.published_at.strftime("%Y-%m-%d") }}</span>
+        {% if card.is_group %}<span class="group-badge">{{ card.member_count }} notices</span>{% endif %}
         {% if cls.unclassified %}<span class="unclassified-badge">keyword</span>{% endif %}
       </div>
       <div class="card-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></div>
-      {% if cls.summary %}<div class="card-summary">{{ cls.summary }}</div>{% endif %}
-      {% if cls.tags %}<div class="card-tags">{% for tag in cls.tags %}<span class="tag-chip">{{ tag }}</span>{% endfor %}</div>{% endif %}
+      {% if card.summary %}<div class="card-summary">{{ card.summary }}</div>{% endif %}
+      {% if card.is_group %}
+      <div class="card-markets" title="This notice was published to each of these markets">
+        {% for label, url in card.markets %}<a class="market-chip" href="{{ url }}" target="_blank" rel="noopener">{{ label }}</a>{% endfor %}
+      </div>
+      {% endif %}
+      {% if card.tags %}<div class="card-tags">{% for tag in card.tags %}<span class="tag-chip">{{ tag }}</span>{% endfor %}</div>{% endif %}
       <div class="card-score-detail">score {{ "%.1f"|format(score) }} = {{ cls.relevance }} × {{ tier_weights[cls.tier] }} × decay · {{ item.source_id }} · {{ cls.model }} <span class="item-id" data-id="{{ item.id }}" title="Click to copy ID">{{ item.id[:8] }}</span></div>
     </div>
   </article>
@@ -569,12 +614,12 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
 
   {% if new_today %}
   <div class="section-header" id="section-today">New today · {{ new_today | length }} item{% if new_today | length != 1 %}s{% endif %}</div>
-  {% for item, cls, score in new_today %}{{ render_card(item, cls, score) }}{% endfor %}
+  {% for card in new_today %}{{ render_card(card) }}{% endfor %}
   {% endif %}
 
   {% if earlier %}
   <div class="section-header" id="section-earlier">Earlier · last {{ trailing_days }} days · {{ earlier | length }} item{% if earlier | length != 1 %}s{% endif %}</div>
-  {% for item, cls, score in earlier %}{{ render_card(item, cls, score) }}{% endfor %}
+  {% for card in earlier %}{{ render_card(card) }}{% endfor %}
   {% endif %}
 
   {% if not new_today and not earlier %}
@@ -588,10 +633,12 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
       <span class="suppressed-header-text">Suppressed · {{ suppressed | length }}</span>
     </summary>
     <ul class="suppressed-list" id="suppressed-list">
-      {% for item, cls in suppressed %}
-      <li class="suppressed-item" data-first-seen="{{ item.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-tags="{{ cls.tags | join(' ') }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %}>
+      {% for card in suppressed %}
+      {% set item = card.item %}
+      <li class="suppressed-item" data-first-seen="{{ card.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-tags="{{ card.tags | join(' ') }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %}>
         <span class="suppressed-venue">{{ item.venue }}</span>
         <span class="suppressed-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></span>
+        {% if card.is_group %}<span class="suppressed-markets">{% for label, url in card.markets %}<a class="market-chip" href="{{ url }}" target="_blank" rel="noopener">{{ label }}</a>{% endfor %}</span>{% endif %}
       </li>
       {% endfor %}
     </ul>

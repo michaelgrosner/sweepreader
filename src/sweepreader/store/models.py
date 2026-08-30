@@ -98,3 +98,52 @@ class Classification:
             tags=d.get("tags", []),
             unclassified=d.get("unclassified", False),
         )
+
+
+@dataclass
+class Group:
+    """A set of items describing one underlying event.
+
+    `group_id` is derived from the membership, so a group keeps a stable identity
+    across runs and re-deriving it is idempotent. Adding or removing a member
+    produces a different group_id — which is what makes the LLM summary cacheable
+    (see GROUPING.md decision 2).
+    """
+    group_id: str
+    member_ids: list[str]
+    canonical_id: str
+    decided_at: datetime
+    decided_by: str = "heuristic"   # "heuristic" | "llm"
+    confidence: float = 1.0
+    summary: Optional[str] = None
+    model: Optional[str] = None
+
+    @staticmethod
+    def make_id(member_ids: list[str]) -> str:
+        blob = "::".join(sorted(member_ids))
+        return hashlib.sha256(blob.encode()).hexdigest()[:24]
+
+    def to_dict(self) -> dict:
+        return {
+            "group_id": self.group_id,
+            "member_ids": self.member_ids,
+            "canonical_id": self.canonical_id,
+            "decided_at": self.decided_at.isoformat(),
+            "decided_by": self.decided_by,
+            "confidence": self.confidence,
+            "summary": self.summary,
+            "model": self.model,
+        }
+
+    @staticmethod
+    def from_dict(d: dict) -> "Group":
+        return Group(
+            group_id=d["group_id"],
+            member_ids=list(d["member_ids"]),
+            canonical_id=d["canonical_id"],
+            decided_at=datetime.fromisoformat(d["decided_at"]),
+            decided_by=d.get("decided_by", "heuristic"),
+            confidence=float(d.get("confidence", 1.0)),
+            summary=d.get("summary"),
+            model=d.get("model"),
+        )

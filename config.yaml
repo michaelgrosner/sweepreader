@@ -1,6 +1,10 @@
 model: "~deepseek/deepseek-v4-flash-latest"
 suppress_threshold: 35
 trailing_days: 14
+grouping:
+  enabled: true      # collapse cross-market duplicates into one card
+  llm: true          # have the model confirm each candidate group
+
 classify_concurrency: 8
 # Hard floor applied everywhere (run, seed, backtest): items published older than
 # this are fully ignored — never ingested, classified, or scored. Required.

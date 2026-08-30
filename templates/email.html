@@ -38,7 +38,7 @@
       <!-- Top items -->
       <tr><td class="surface" style="background:#FFFFFF;border:1px solid #E2E6EE;border-top:none;border-bottom:none;padding:0 24px;">
         <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#9CA3AF;padding:16px 0 10px;border-bottom:1px solid #E2E6EE;">New since last digest</div>
-        {% for item, cls, score in top_items %}
+        {% for card in top_items %}{% set item = card.item %}{% set cls = card.cls %}{% set score = card.score %}
         <table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;border-bottom:1px solid #F1F3F7;">
           <tr>
             <td width="36" valign="top" style="padding-right:12px;padding-bottom:12px;">
@@ -56,7 +56,7 @@
                 <span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#9CA3AF;margin-left:6px;">{{ item.published_at.strftime("%Y-%m-%d") }}</span>
               </div>
               <div style="font-weight:600;font-size:14px;line-height:1.4;margin-bottom:5px;">
-                <a href="{{ item.url }}" style="color:#111827;text-decoration:none;">{{ item.title }}</a>
+                <a href="{{ item.url }}" style="color:#111827;text-decoration:none;">{{ item.title }}</a>{% if card.is_group %}<span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:10px;color:#6B7280;">&nbsp;· and {{ card.member_count - 1 }} more market{% if card.member_count > 2 %}s{% endif %}</span>{% endif %}
               </div>
               {% if cls.summary %}
               <div style="font-size:13px;color:#4B5563;line-height:1.5;">{{ cls.summary }}</div>
@@ -77,10 +77,10 @@
       <!-- Also worth a look -->
       <tr><td class="surface" style="background:#FFFFFF;border:1px solid #E2E6EE;border-top:none;border-bottom:none;padding:0 24px;">
         <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#9CA3AF;padding:14px 0 8px;border-bottom:1px solid #E2E6EE;">Also worth a look</div>
-        {% for item, cls, score in also_items %}
+        {% for card in also_items %}{% set item = card.item %}{% set cls = card.cls %}{% set score = card.score %}
         <div style="padding:8px 0;border-bottom:1px solid #F1F3F7;display:flex;gap:8px;align-items:baseline;">
           <span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#9CA3AF;min-width:48px;text-transform:uppercase;">{{ item.venue }}</span>
-          <span style="font-size:13px;color:#4B5563;"><a href="{{ item.url }}" style="color:#4B5563;text-decoration:none;">{{ item.title }}</a></span>
+          <span style="font-size:13px;color:#4B5563;"><a href="{{ item.url }}" style="color:#4B5563;text-decoration:none;">{{ item.title }}</a>{% if card.is_group %}<span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:10px;color:#6B7280;">&nbsp;· and {{ card.member_count - 1 }} more market{% if card.member_count > 2 %}s{% endif %}</span>{% endif %}</span>
         </div>
         {% endfor %}
       </td></tr>

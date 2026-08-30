@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from sweepreader.classify.classifier import OpenRouterClient, keyword_fallback
 from sweepreader.config import load_config
+from sweepreader.grouping import build_groups
 from sweepreader.ingest.base import fetch_source
 from sweepreader.ingest.cluster import assign_clusters
 from sweepreader.render import render_page
@@ -26,6 +27,35 @@ def _classify_item(item, existing_cls, llm, config, config_hash, dry_run, store)
 
     if not dry_run:
         store.append_classification(cls, force=(existing_cls is not None))
+
+
+def _build_and_store_groups(store, config, now, *, dry_run: bool) -> None:
+    """Derive groups over the whole trailing window, not just this run's new items —
+    duplicates usually arrive in different runs (GROUPING.md §2b)."""
+    if not config.grouping_enabled:
+        return
+    window_items = store.items_as_of(now, config.trailing_days)
+    groups = build_groups(window_items, now=now)
+    if not groups:
+        return
+
+    # group_id encodes membership, so anything already stored is unchanged and
+    # must not be re-adjudicated — that is what keeps the LLM summary cached.
+    fresh = [g for g in groups if not store.has_group(g.group_id)]
+    logger.info("groups: %d in window, %d new", len(groups), len(fresh))
+    if not fresh:
+        return
+
+    if config.grouping_llm:
+        from sweepreader.classify.grouper import adjudicate
+        items_by_id = {i.id: i for i in window_items}
+        fresh = adjudicate(fresh, items_by_id, config, now=now)
+
+    if dry_run:
+        logger.info("dry-run: not persisting %d group(s)", len(fresh))
+        return
+    written = sum(1 for g in fresh if store.append_group(g))
+    logger.info("groups: %d persisted", written)
 
 
 def _run_parallel(items, existing_clss, llm, config, config_hash, dry_run, store, label):
@@ -143,6 +173,8 @@ def cmd_run(args) -> int:
     ]
     _run_parallel(backfill, existing_clss, llm, config, config_hash,
                   args.dry_run, store, "backfill")
+
+    _build_and_store_groups(store, config, now, dry_run=args.dry_run)
 
     state.set("failures_this_run", failures)
     state.set("source_health", per_source_health)

@@ -6,7 +6,7 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sweepreader.store.models import Classification, Item
+from sweepreader.store.models import Classification, Group, Item
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +50,14 @@ class Store:
         self._data = Path(data_dir)
         self._items_dir = self._data / "items"
         self._class_dir = self._data / "classifications"
+        self._group_dir = self._data / "groups"
         self._items_dir.mkdir(parents=True, exist_ok=True)
         self._class_dir.mkdir(parents=True, exist_ok=True)
+        self._group_dir.mkdir(parents=True, exist_ok=True)
 
         self._known_item_ids: set[str] = set()
         self._known_class_keys: set[tuple[str, str]] = set()
+        self._known_group_ids: set[str] = set()
         self._cls_lock = threading.Lock()
         self._load_indexes()
 
@@ -66,6 +69,15 @@ class Store:
                     try:
                         d = json.loads(line)
                         self._known_item_ids.add(d["id"])
+                    except Exception:
+                        pass
+
+        for p in sorted(self._group_dir.glob("*.jsonl")):
+            for line in p.read_text().splitlines():
+                line = line.strip()
+                if line:
+                    try:
+                        self._known_group_ids.add(json.loads(line)["group_id"])
                     except Exception:
                         pass
 
@@ -108,6 +120,51 @@ class Store:
                 f.write(json.dumps(cls.to_dict()) + "\n")
             self._known_class_keys.add(key)
         return True
+
+    def append_group(self, group: Group) -> bool:
+        """Append a group record. group_id encodes membership, so re-deriving an
+        unchanged group is a no-op and the LLM summary is not regenerated."""
+        with self._cls_lock:
+            if group.group_id in self._known_group_ids:
+                return False
+            shard = _shard_key(group.decided_at)
+            path = self._group_dir / f"{shard}.jsonl"
+            with path.open("a") as f:
+                f.write(json.dumps(group.to_dict()) + "\n")
+            self._known_group_ids.add(group.group_id)
+        return True
+
+    def has_group(self, group_id: str) -> bool:
+        return group_id in self._known_group_ids
+
+    def groups_as_of(
+        self,
+        as_of: datetime,
+        *,
+        since: datetime | None = None,
+    ) -> dict[str, Group]:
+        """Latest record per group_id, keyed by group_id."""
+        cutoff = as_of.replace(tzinfo=None) if as_of.tzinfo else as_of
+        latest: dict[str, Group] = {}
+        if since is not None:
+            shards = _get_shards_in_range(self._group_dir, since, as_of)
+        else:
+            shards = sorted(self._group_dir.glob("*.jsonl"))
+        for p in shards:
+            for line in p.read_text().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    g = Group.from_dict(json.loads(line))
+                    dat = g.decided_at.replace(tzinfo=None) if g.decided_at.tzinfo else g.decided_at
+                    if dat <= cutoff:
+                        prev = latest.get(g.group_id)
+                        if prev is None or g.decided_at > prev.decided_at:
+                            latest[g.group_id] = g
+                except Exception as e:
+                    logger.warning("Corrupt group line in %s: %s", p, e)
+        return latest
 
     def has_classification(self, item_id: str, *, config_hash: str) -> bool:
         return (item_id, config_hash) in self._known_class_keys

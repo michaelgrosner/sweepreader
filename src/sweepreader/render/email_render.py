@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from sweepreader.render.page import _collapse
 from sweepreader.score import rank_items
 
 if TYPE_CHECKING:
@@ -55,8 +56,13 @@ def render_email(
 
     visible, suppressed = rank_items(delta_items, delta_cls, config, now)
 
-    top_items = [(i, c, s) for i, c, s in visible if c.tier in ("A", "B")]
-    also_items = [(i, c, s) for i, c, s in visible if c.tier not in ("A", "B")]
+    # Collapse cross-posts to one line, same as the page (GROUPING.md §3.4).
+    groups = store.groups_as_of(now, since=now - timedelta(days=config.trailing_days)) \
+        if config.grouping_enabled else {}
+    cards, suppressed_cards = _collapse(visible, suppressed, groups, delta_items, delta_cls)
+
+    top_items = [c for c in cards if c.cls.tier in ("A", "B")]
+    also_items = [c for c in cards if c.cls.tier not in ("A", "B")]
 
     env = Environment(
         loader=FileSystemLoader(str(_TEMPLATES_DIR)),
@@ -69,7 +75,7 @@ def render_email(
         now=now,
         top_items=top_items,
         also_items=also_items,
-        suppressed_count=len(suppressed),
+        suppressed_count=len(suppressed_cards),
         last_sent=last_sent,
         tier_colors=_TIER_COLORS,
         page_url=config.page_url,
@@ -77,7 +83,7 @@ def render_email(
 
     if dry_run:
         print(html)
-        logger.info("email dry-run: %d top, %d also, %d suppressed", len(top_items), len(also_items), len(suppressed))
+        logger.info("email dry-run: %d top, %d also, %d suppressed", len(top_items), len(also_items), len(suppressed_cards))
         return html
 
     _send_email(html, now)

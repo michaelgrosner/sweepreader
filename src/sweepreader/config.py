@@ -47,6 +47,11 @@ class AppConfig:
     max_age_days: int  # hard floor: never ingest/classify/score anything older than this
     page_url: str = ""
     classify_concurrency: int = 8
+    # Grouping settings are intentionally absent from config_hash(): grouping is a
+    # cross-item property stored in data/groups/, so toggling it must not
+    # invalidate any per-item classification.
+    grouping_enabled: bool = True
+    grouping_llm: bool = True
 
     def max_age_cutoff(self, now: datetime | None = None) -> datetime:
         """The oldest `published_at` allowed anywhere in the pipeline."""
@@ -105,6 +110,8 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         max_age_days=int(raw["max_age_days"]),
         page_url=raw.get("page_url", ""),
         classify_concurrency=int(raw.get("classify_concurrency", 8)),
+        grouping_enabled=bool(raw.get("grouping", {}).get("enabled", True)),
+        grouping_llm=bool(raw.get("grouping", {}).get("llm", True)),
     )
 
 

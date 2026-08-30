@@ -1,7 +1,24 @@
 # Proposal: LLM-assisted grouping of duplicate notices
 
-Status: **proposal, not implemented.** Measurements below are from the committed
-corpus as of 2026-08-30 (4,822 items in `data/items/`).
+Status: **implemented** (2026-08-30). Measurements below are from the committed
+corpus as of that date (4,822 items in `data/items/`).
+
+Implementation: `src/sweepreader/grouping.py` (candidates), `classify/grouper.py`
+(LLM adjudication), `Group` in `store/models.py` + `data/groups/`, `_collapse` in
+`render/page.py`, market chips in `templates/page.html`. Toggles live under
+`grouping:` in `config.yaml`.
+
+**Measured result on the current window: 259 rows -> 204 (21%).** The visible
+section drops 59 items to 52 cards; the larger share of duplication turned out to
+sit in the *suppressed* list (200 -> 152), so fully-suppressed groups collapse too.
+
+**Correction to §3.2 as first drafted.** The original design used pairwise title
+similarity with union-find. Run against real data it chained 35 unrelated NYSE
+notices into a single group — single-linkage clustering on formulaic titles merges
+almost everything transitively. It reported a 66% reduction that was destroying
+information. Candidate generation now uses *exact* blocking keys (filing number,
+or URL stem, or normalized title + exchange group + publication day), which cannot
+chain. That is the honest 21%.
 
 ## 1. The problem, measured
 
@@ -277,10 +294,13 @@ also makes the collapse legible: "4 notices" says little, "MIAX Options · Sapph
 Pearl · Emerald" says exactly what was merged and lets a reader spot a bad merge at a
 glance.
 
-## 7. Remaining open question
+**4. A cross-post is never worth showing as multiple cards.** The market list is
+sufficient. Each entry in that list is a link to its own notice/spec, so no information
+is lost by collapsing — the reader reaches any individual notice in one click. This
+replaces the disclosure-expansion idea in §3.4: the market chips *are* the member links,
+so there is no separate expandable list.
 
-Is a 4-way MIAX cross-post ever worth showing as four cards — is per-market
-confirmation itself signal to an options market-making desk? Decision 3 partly hedges
-this: the market list on the collapsed card preserves the coverage information without
-the four-card cost. If that proves insufficient, the disclosure expansion is the escape
-hatch.
+One consequence to watch: chips are labelled by `venue`, so a group whose members share
+a venue (e.g. five `NYSE Bonds` notices) renders repeated labels pointing at different
+URLs. That is honest but visually repetitive, and is a signal the group may be an
+over-merge rather than a true cross-post.

@@ -3,12 +3,56 @@ from __future__ import annotations
 import re
 from datetime import timedelta
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 if TYPE_CHECKING:
     from sweepreader.store.models import Item
 
 _FILING_RE = re.compile(r'SR-([A-Z]+-\d{4}-\d+)', re.I)
 _CLOSE_WINDOW = timedelta(hours=72)
+
+# `venue` is the individual market ("MIAX Sapphire", "NYSE Bonds"), not the
+# exchange group. Grouping is scoped to one exchange group (GROUPING.md
+# decision 1), so pairs are compared on the group, not the raw venue.
+_VENUE_GROUPS = (
+    "MIAX", "NYSE", "CBOE", "NASDAQ", "IEX", "MEMX", "BOX",
+    "OCC", "OPRA", "SEC", "FINRA", "CAT", "ICE",
+)
+
+
+def venue_group(venue: str) -> str:
+    """Map a per-market venue to its exchange group.
+
+    "MIAX Sapphire" -> "MIAX";  "NYSE Arca Options" -> "NYSE";  "SEC" -> "SEC".
+    Some NYSE items slash-join several markets into one string; the first
+    segment decides the group.
+    """
+    v = venue.strip().upper()
+    for g in _VENUE_GROUPS:
+        if v == g or v.startswith(g + " ") or v.startswith(g + "/"):
+            return g
+    if "/" in v:
+        return venue_group(v.split("/", 1)[0])
+    return v
+
+
+_TRAILING_COUNTER = re.compile(r'-\d+$')
+_PAGE_TAILS = ("/overview", "/introduction", "/summary")
+
+
+def slug_stem(url: str) -> str:
+    """Normalize a URL to the document it points at.
+
+    MIAX publishes one alert per market as `...-daylight-saving-0/-2/-3/-4`, and
+    Cboe serves one spec at both `.../specification` and `.../specification/overview`.
+    Both collapse to the same stem.
+    """
+    path = urlparse(url).path.rstrip("/")
+    for tail in _PAGE_TAILS:
+        if path.endswith(tail):
+            path = path[: -len(tail)]
+            break
+    return _TRAILING_COUNTER.sub("", path)
 
 
 def _filing_number(item: "Item") -> str | None:
@@ -66,14 +110,15 @@ def assign_clusters(items: list["Item"]) -> list["Item"]:
         for item_b in unclustered[i+1:]:
             if item_a.cluster_id and item_a.cluster_id == item_b.cluster_id:
                 continue
-            if item_a.venue != item_b.venue:
+            if venue_group(item_a.venue) != venue_group(item_b.venue):
                 continue
             dt_a = item_a.published_at
             dt_b = item_b.published_at
             if abs((dt_a - dt_b).total_seconds()) > _CLOSE_WINDOW.total_seconds():
                 continue
+            same_doc = slug_stem(item_a.url) == slug_stem(item_b.url)
             sim = _title_similarity(item_a.title, item_b.title)
-            if sim >= 0.6:
+            if sim >= 0.6 or same_doc:
                 if item_a.cluster_id and item_b.cluster_id:
                     # Merge clusters: set all items in the list with item_b's cluster_id to item_a's cluster_id
                     old_id = item_b.cluster_id
