@@ -44,7 +44,7 @@ def cmd_backtest(args) -> int:
     to_classify = []
     cached = 0
     for item in items:
-        if store.has_classification(item.id, config_hash):
+        if store.has_classification(item.id, config_hash=config_hash):
             cached += 1
         else:
             to_classify.append(item)
@@ -78,7 +78,7 @@ def cmd_backtest(args) -> int:
     logger.info("Backtest: %d cached, %d newly classified", cached, new_cls)
 
     # Emit ranked results as-of the to_dt
-    classifications = store.classifications_as_of(to_dt, config_hash, since=from_dt)
+    classifications = store.classifications_as_of(to_dt, config_hash=config_hash, since=from_dt)
     visible, suppressed = rank_items(items, classifications, config, to_dt)
 
     print(f"\n=== Backtest result: {args.from_date} → {args.to_date} ===")

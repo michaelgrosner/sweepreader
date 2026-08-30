@@ -45,7 +45,7 @@ def render_page(
     cutoff = now - timedelta(days=config.trailing_days)
 
     items = store.items_as_of(now, config.trailing_days)
-    classifications = store.classifications_as_of(now, config.config_hash(), since=cutoff)
+    classifications = store.classifications_as_of(now, config_hash=config.config_hash(), since=cutoff)
 
     from sweepreader.tags import ALLOWED_TAGS
     for cls in classifications.values():

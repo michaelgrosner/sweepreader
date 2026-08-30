@@ -109,7 +109,7 @@ class Store:
             self._known_class_keys.add(key)
         return True
 
-    def has_classification(self, item_id: str, config_hash: str) -> bool:
+    def has_classification(self, item_id: str, *, config_hash: str) -> bool:
         return (item_id, config_hash) in self._known_class_keys
 
     def items_since(self, since: datetime) -> list[Item]:
@@ -156,6 +156,7 @@ class Store:
     def classifications_as_of(
         self,
         as_of: datetime,
+        *,
         config_hash: str,
         since: datetime | None = None,
     ) -> dict[str, Classification]:

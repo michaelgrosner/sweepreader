@@ -80,10 +80,10 @@ def test_classification_dedup(store):
 def test_has_classification(store):
     item = make_item("b")
     store.append_item(item)
-    assert not store.has_classification(item.id, "abc123")
+    assert not store.has_classification(item.id, config_hash="abc123")
     cls = make_cls(item)
     store.append_classification(cls)
-    assert store.has_classification(item.id, "abc123")
+    assert store.has_classification(item.id, config_hash="abc123")
 
 
 def test_items_since(store):
@@ -116,5 +116,5 @@ def test_store_survives_reload(store):
     store.append_classification(cls)
 
     store2 = Store(store._data)
-    assert store2.has_classification(item.id, "abc123")
+    assert store2.has_classification(item.id, config_hash="abc123")
     assert item.id in store2._known_item_ids

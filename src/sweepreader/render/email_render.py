@@ -46,7 +46,7 @@ def render_email(
 
     now = datetime.now(timezone.utc)
     items = store.items_as_of(now, config.trailing_days)
-    classifications = store.classifications_as_of(now, config.config_hash(),
+    classifications = store.classifications_as_of(now, config_hash=config.config_hash(),
                                                   since=now - timedelta(days=config.trailing_days))
 
     # Email shows only delta since last send
