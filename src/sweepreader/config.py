@@ -57,7 +57,6 @@ class AppConfig:
     def config_hash(self) -> str:
         blob = json.dumps(
             {
-                "model": self.model,
                 "suppress_threshold": self.suppress_threshold,
                 "profile_prompt": self.profile_prompt,
                 "tier_weights": self.tier_weights,

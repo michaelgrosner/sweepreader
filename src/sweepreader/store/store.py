@@ -77,7 +77,7 @@ class Store:
                     try:
                         d = json.loads(line)
                         self._known_class_keys.add(
-                            (d["item_id"], d["model"], d["config_hash"])
+                            (d["item_id"], d["config_hash"])
                         )
                     except Exception:
                         pass
@@ -95,7 +95,7 @@ class Store:
         return True
 
     def append_classification(self, cls: Classification, force: bool = False) -> bool:
-        key = (cls.item_id, cls.model, cls.config_hash)
+        key = (cls.item_id, cls.config_hash)
         with self._cls_lock:
             if key in self._known_class_keys and not force:
                 return False
@@ -110,8 +110,8 @@ class Store:
             self._known_class_keys.add(key)
         return True
 
-    def has_classification(self, item_id: str, model: str, config_hash: str) -> bool:
-        return (item_id, model, config_hash) in self._known_class_keys
+    def has_classification(self, item_id: str, config_hash: str) -> bool:
+        return (item_id, config_hash) in self._known_class_keys
 
     def items_since(self, since: datetime) -> list[Item]:
         results: list[Item] = []
@@ -157,7 +157,6 @@ class Store:
     def classifications_as_of(
         self,
         as_of: datetime,
-        model: str,
         config_hash: str,
         since: datetime | None = None,
     ) -> dict[str, Classification]:
@@ -174,7 +173,7 @@ class Store:
                     continue
                 try:
                     d = json.loads(line)
-                    if d["model"] != model or d["config_hash"] != config_hash:
+                    if d["config_hash"] != config_hash:
                         continue
                     cls = Classification.from_dict(d)
                     cat = cls.classified_at.replace(tzinfo=None) if cls.classified_at.tzinfo else cls.classified_at
