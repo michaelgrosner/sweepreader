@@ -54,8 +54,27 @@ Rewriting it in place is acceptable only for a deliberate one-time migration.
 
 ## Static analysis
 
-None is configured; dev deps are pytest only. mypy reports 7 pre-existing
-errors in src/ (score.py, federal_register.py, email_ingestor.py, box.py). If
-you add a checker to CI, baseline those first or every run will fail. The
-box.py:172 report is a false positive — mypy cannot prove a sliced struct_time
-has length 6.
+CI runs ruff and mypy before the tests; all three must pass. Run them locally
+the same way — both read their config from `pyproject.toml`, so pass no flags:
+
+```
+python -m ruff check      # add --fix for the mechanical ones
+python -m mypy
+python -m pytest
+```
+
+`src/` and `tests/` are currently clean under `check_untyped_defs`. Keep them
+that way rather than adding blanket ignores. Two targeted `# type: ignore`
+comments exist, both for typeshed imprecision rather than real defects, and
+`warn_unused_ignores` is on so they will error if they ever stop being needed.
+
+Ignored ruff rules are stylistic only (E501 line length, E702 semicolons,
+E731 lambda assignment). Do not widen that list to silence a correctness rule.
+
+## API design
+
+Identifiers that are structurally interchangeable — several `str` parameters
+in a row — must be keyword-only, as on `Store.classifications_as_of` and
+`Store.has_classification`. A type checker cannot distinguish `str` from `str`,
+so positional passing of `config_hash`/`model`-shaped values is a silent
+failure mode. Keyword-only turns it into an error at every call site.
