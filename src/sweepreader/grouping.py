@@ -53,6 +53,10 @@ _SRO_ENTITY_TOKENS: dict[str, frozenset[str]] = {
 _SRO_GENERIC_TOKENS = frozenset({"llc", "inc", "exchange", "exchanges", "the", "s"})
 
 _SRO_PREFIX = re.compile(r"^self\s+regulatory\s+organizations\s+", re.I)
+# "To Delay the Implementation of SR-GEMX-2026-15" vs "... of SR-ISE-2026-18" are
+# the same action by sibling exchanges; the referenced filing number is the entity
+# identity again, not the substance.
+_SRO_FILING_REF = re.compile(r"\bsr\s+[a-z]+\s+\d{4}\s+\d+\b")
 
 
 def _sro_subject(title: str, group: str) -> str:
@@ -60,6 +64,7 @@ def _sro_subject(title: str, group: str) -> str:
     identity removed so sibling filings collapse together."""
     norm = _norm_title(title)
     norm = _SRO_PREFIX.sub("", norm)
+    norm = _SRO_FILING_REF.sub("<filing>", norm)
     drop = _SRO_ENTITY_TOKENS.get(group, frozenset()) | _SRO_GENERIC_TOKENS
     return " ".join(w for w in norm.split() if w not in drop)
 
@@ -171,6 +176,26 @@ def build_groups(items: list["Item"], *, now: datetime | None = None) -> list[Gr
     return out
 
 
+_FR_ENTITY = re.compile(
+    r"^\s*self-regulatory organizations[;,]\s*(.+?)\s*;", re.I
+)
+_ENTITY_SUFFIX = re.compile(r",?\s+(llc|inc\.?|l\.l\.c\.?)\s*$", re.I)
+
+
+def market_label(item: "Item") -> str:
+    """Chip label for one group member.
+
+    Federal Register items all carry the exchange group as their venue ("MIAX"),
+    so a group of parallel filings would render identical chips. The filing entity
+    in the title prefix is what actually distinguishes them.
+    """
+    if item.source_id.startswith("fed_register"):
+        m = _FR_ENTITY.match(item.title)
+        if m:
+            return _ENTITY_SUFFIX.sub("", m.group(1)).strip()
+    return item.venue
+
+
 def market_links(members: list["Item"]) -> list[tuple[str, str]]:
     """(market label, url) per member, for the chips on a grouped card.
 
@@ -180,8 +205,8 @@ def market_links(members: list["Item"]) -> list[tuple[str, str]]:
     """
     seen: set[tuple[str, str]] = set()
     out: list[tuple[str, str]] = []
-    for m in sorted(members, key=lambda x: (x.venue, x.id)):
-        key = (m.venue, m.url)
+    for m in sorted(members, key=lambda x: (market_label(x), x.id)):
+        key = (market_label(m), m.url)
         if key in seen:
             continue
         seen.add(key)

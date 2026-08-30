@@ -392,3 +392,40 @@ def test_slug_stem_keeps_the_fragment():
     a = "https://www.nyse.com/trader-update/history#110000959449"
     b = "https://www.nyse.com/trader-update/history#110000959448"
     assert slug_stem(a) != slug_stem(b)
+
+
+# --- chip labels ------------------------------------------------------------
+
+def test_federal_register_chips_use_the_filing_entity():
+    """FR items all carry the exchange group as venue, so parallel filings would
+    otherwise render as two identical 'MIAX' chips."""
+    from sweepreader.grouping import market_label
+    a = _fr("a", "MIAX Emerald, LLC", "Notice of Filing", "MIAX")
+    b = _fr("b", "Miami International Securities Exchange, LLC", "Notice of Filing", "MIAX")
+    assert market_label(a) == "MIAX Emerald"
+    assert market_label(b) == "Miami International Securities Exchange"
+    labels = [lbl for lbl, _ in market_links([a, b])]
+    assert len(set(labels)) == 2
+
+
+def test_non_federal_register_chips_use_the_venue():
+    from sweepreader.grouping import market_label
+    i = make_item("a", venue="MIAX Pearl", title="Alert", url="https://x/1")
+    assert market_label(i) == "MIAX Pearl"
+
+
+# --- referenced filing numbers ---------------------------------------------
+
+def test_delay_notices_referencing_sibling_filings_group():
+    """'To Delay the Implementation of SR-GEMX-2026-15' and '... of SR-ISE-2026-18'
+    are the same action by sibling exchanges."""
+    items = [
+        _fr("a", "Nasdaq GEMX, LLC",
+            "Notice of Filing and Immediate Effectiveness of Proposed Rule Change To Delay "
+            "the Implementation of SR-GEMX-2026-15", "NASDAQ"),
+        _fr("b", "Nasdaq ISE, LLC",
+            "Notice of Filing and Immediate Effectiveness of Proposed Rule Change To Delay "
+            "the Implementation of SR-ISE-2026-18", "NASDAQ"),
+    ]
+    groups = candidate_groups(items)
+    assert len(groups) == 1 and len(groups[0]) == 2

@@ -74,6 +74,12 @@ Respond ONLY with valid JSON matching this schema:
 }}
 No other text — just the JSON object.
 
+Summary style: lead with the substance — which rule, field, message type, order
+type, symbol set or session changes, and the dates that matter. Omit generic
+closers ("engineers should update their systems", "warrants review"); the reader
+knows why they subscribed. If the text is only a title with no detail, write one
+short factual sentence from what is there rather than padding.
+
 Classify the item below:
 Title: {item.title}
 Source: {item.source_id}
