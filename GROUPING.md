@@ -66,10 +66,21 @@ different `cluster_id`s from three consecutive days:
 
 With a 3-hour cadence and a 14-day window, most duplicates arrive in different runs.
 
-**(c) The similarity pass is same-venue only.** `cluster.py:69` skips any pair where
-`item_a.venue != item_b.venue`, so a notice cross-posted between venue groups, or the
-same event reported by both a venue feed and an API, can only ever be joined by an
-explicit filing number.
+**(c) The same-venue guard blocks the exact case we care about.** `cluster.py:69`
+skips any pair where `item_a.venue != item_b.venue`. Critically, `venue` is *not* an
+exchange group — it is the individual market. The four MIAX copies above carry four
+different venues and, provably, no cluster:
+
+```
+venue=MIAX Sapphire   cluster=None
+venue=MIAX Pearl      cluster=None
+venue=MIAX Emerald    cluster=None
+venue=MIAX Options    cluster=None
+```
+
+So the guard is the direct cause of the largest duplicate class in the corpus. The
+venue vocabulary is per-market throughout — `MIAX Options/Sapphire/Pearl/Emerald/
+Futures/Pearl Equities`, `NYSE Bonds`, `NYSE Arca Options`, and so on.
 
 Net effect: 34% of items carry a `cluster_id`, but only 381 items (7.9%) are in a
 cluster with more than one member, and 1,273 cluster_ids have exactly one member.
@@ -102,12 +113,29 @@ should adjudicate only *candidate* pairs that cheap heuristics have already shor
   this alone catches both the MIAX and Cboe cases above
 - published within 72h of each other
 
-Drop the same-venue guard here; the venue is a *feature* for the model, not a filter.
+**Do not drop the venue guard — narrow it.** Per decision (1) below, grouping stays
+inside one exchange group. Since `venue` is per-market, the guard must compare
+*exchange groups*, not venues, which needs a mapping that does not exist yet:
+
+```python
+# MIAX Options/Sapphire/Pearl/Emerald/Futures/Pearl Equities -> MIAX
+# NYSE / NYSE Arca * / NYSE American * / NYSE Bonds / NYSE Texas -> NYSE
+# Cboe BZX/BYX/EDGX/EDGA/C1/C2 -> CBOE
+_VENUE_GROUP: dict[str, str]
+```
+
+This is the single highest-value change in the whole proposal: it is a few lines, needs
+no model, and directly unblocks the MIAX and Cboe fan-outs.
 
 **LLM adjudication** takes a batch of candidate groups and returns, per group, whether
-the items describe one underlying event, plus which item should be canonical and a
-one-line group summary. Batch many groups per call — this is a cheap classification,
-not the main relevance judgment.
+the items describe one underlying event, which item is canonical, and — per decision
+(2) — a purpose-written group summary rather than reusing the canonical item's. Batch
+many groups per call; this is a cheap classification, not the main relevance judgment.
+
+The group summary lives in the group record, never in `Classification`. Key its
+freshness on the membership set (`sha256` of sorted `member_ids`) so it is written once
+per distinct group and only rewritten when a member is added or removed — otherwise a
+5-member group would be re-summarized on every one of the eight daily runs.
 
 Rough cost: ~42 candidate groups per window, batched ~10 per call, ≈5 extra calls per
 run against the existing ~270 classification calls. Under 2% overhead.
@@ -150,9 +178,10 @@ canonical item as the card and collapses the rest:
 ```
 ┌──────────────────────────────────────────────────────┐
 │ [A]  MIAX Exchange Group — Daylight Saving Time       │
-│      One-line summary…                                │
+│      LLM group summary…                               │
+│      ⌂ MIAX Options · Sapphire · Pearl · Emerald      │
 │      #system-status #options                          │
-│      ▸ 5 notices across 2 sources        ← disclosure  │
+│      ▸ 4 notices across 2 sources        ← disclosure  │
 │      score 74.2 · miax_options · deepseek…            │
 └──────────────────────────────────────────────────────┘
         expands to a plain list of the other 4,
@@ -164,6 +193,14 @@ Specifics worth deciding up front:
 - **Score and rank on the canonical item**, not the group, so ranking stays comparable
   with ungrouped cards. Do not sum scores across members — a 5-way cross-post is not
   five times as important, which is the entire point.
+- **Show the affected markets on the card** (decision 3). The data supports this
+  directly: each member already carries a per-market `venue`, so the group yields
+  `MIAX Options · Sapphire · Pearl · Emerald` without any new extraction. Two wrinkles
+  — NYSE already slash-joins several venues into one string
+  (`NYSE / NYSE Arca Equities / NYSE Texas`), so split on `" / "` and union before
+  rendering; and a wide group needs truncation (`+3 more`) or it will dominate the card.
+  Render these as distinct chips, visually separate from tag chips, so the filter bar
+  is not confused with market coverage.
 - **Union the tags** across members for filtering, so a filter match on any member
   surfaces the group. The existing filter bar reads `data-tags` on the card; the
   wrapper should carry the union.
@@ -216,12 +253,34 @@ needs the LLM, and it is refinement rather than the bulk of the win.
   (e.g. hash of sorted member ids) or persisted. Unstable ids will break the UI's
   time-travel scrubber and any future per-group read state.
 
-## 6. Open questions
+## 6. Decisions
 
-1. Should a group span venues (Cboe *and* MIAX announcing the same SEC-driven change),
-   or only fan-out within one exchange group? Cross-venue is more useful but much
-   easier to get wrong.
-2. Should the LLM also *rewrite* the group summary, or reuse the canonical item's
-   existing summary? Reusing is free and avoids a second cache-invalidation surface.
-3. Is a 5-way MIAX cross-post ever worth showing as five cards — is per-market
-   confirmation itself signal to an options market-making desk?
+Resolved 2026-08-30.
+
+**1. Grouping stays inside one exchange group — no cross-venue-group merging.**
+Judged unlikely to arise in practice, and materially harder to get right. This makes
+the venue guard a *narrowing* problem rather than a removal one: keep the guard, but
+compare exchange groups instead of per-market venues (§3.2). It also removes the
+riskiest over-merge case, since two different exchanges announcing the same SEC-driven
+change will simply stay as separate cards.
+
+**2. The LLM writes a purpose-built group summary** rather than reusing the canonical
+item's. Cost is negligible at ~5 batched calls per run. The constraint is freshness:
+key the summary on the membership hash so it is not regenerated on every run (§3.2).
+This is a second surface that can go stale independently of `Classification` — an
+argument for keeping `decided_by`/`confidence` on the record so a bad batch can be
+filtered rather than migrated.
+
+**3. The card shows the list of affected markets.** Already supported by the stored
+data — `venue` is per-market, so a group naturally yields its market list (§3.4). This
+also makes the collapse legible: "4 notices" says little, "MIAX Options · Sapphire ·
+Pearl · Emerald" says exactly what was merged and lets a reader spot a bad merge at a
+glance.
+
+## 7. Remaining open question
+
+Is a 4-way MIAX cross-post ever worth showing as four cards — is per-market
+confirmation itself signal to an options market-making desk? Decision 3 partly hedges
+this: the market list on the collapsed card preserves the coverage information without
+the four-card cost. If that proves insufficient, the disclosure expansion is the escape
+hatch.
