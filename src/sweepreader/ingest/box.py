@@ -106,7 +106,7 @@ def parse_listing(html: str) -> list[dict]:
 
 class BoxAdapter(BaseAdapter):
     def fetch(self) -> list[Item]:
-        now = datetime.now(timezone.utc)
+        now = self._clock()
         cutoff = now - timedelta(days=_LOOKBACK_DAYS)
 
         try:

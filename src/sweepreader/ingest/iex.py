@@ -111,7 +111,7 @@ def iter_seed_items(source_id: str, *, stop_before: datetime, cache=None) -> Ite
 
 class IexAdapter(BaseAdapter):
     def fetch(self) -> list[Item]:
-        now = datetime.now(timezone.utc)
+        now = self._clock()
         cutoff = now - timedelta(days=_LOOKBACK_DAYS)
         return [
             alert_to_item(a, self.source.id, first_seen_at=now)

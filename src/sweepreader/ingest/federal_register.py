@@ -131,7 +131,7 @@ class FederalRegisterAdapter(BaseAdapter):
     BASE_URL = _BASE_URL
 
     def fetch(self) -> list[Item]:
-        now = datetime.now(timezone.utc)
+        now = self._clock()
         cutoff = now - timedelta(days=_LOOKBACK_DAYS)
         return [
             _doc_to_item(doc, self.source.id, first_seen_at=now)

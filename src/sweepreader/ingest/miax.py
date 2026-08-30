@@ -156,7 +156,7 @@ def iter_seed_items(source_id: str, endpoint: str, *, stop_before: datetime,
 
 class MiaxAdapter(BaseAdapter):
     def fetch(self) -> list[Item]:
-        now = datetime.now(timezone.utc)
+        now = self._clock()
         cutoff = now - timedelta(days=_LOOKBACK_DAYS)
         items: list[Item] = []
         seen: set[str] = set()

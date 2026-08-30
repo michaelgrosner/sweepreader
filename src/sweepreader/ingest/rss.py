@@ -104,7 +104,7 @@ class RssAdapter(BaseAdapter):
             raise ValueError(f"Feed parse error for {self.source.endpoint}: {feed.bozo_exception}")
 
         venue = _VENUE_FROM_SOURCE.get(self.source.id, self.source.id.upper())
-        now = datetime.now(timezone.utc)
+        now = self._clock()
         cutoff = now - timedelta(days=_LOOKBACK_DAYS)
         items: list[Item] = []
 

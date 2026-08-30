@@ -35,8 +35,13 @@ def _is_today(dt: datetime, now: datetime) -> bool:
     return d >= today_start
 
 
-def render_page(config: "AppConfig", store: "Store", state: "StateStore") -> None:
-    now = datetime.now(timezone.utc)
+def render_page(
+    config: "AppConfig",
+    store: "Store",
+    state: "StateStore",
+    now: datetime | None = None,
+) -> None:
+    now = now or datetime.now(timezone.utc)
     cutoff = now - timedelta(days=config.trailing_days)
 
     items = store.items_as_of(now, config.trailing_days)

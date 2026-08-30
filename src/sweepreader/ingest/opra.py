@@ -106,7 +106,7 @@ def iter_seed_items(source_id: str, endpoint: str, *, stop_before: datetime, cac
 
 class OpraAdapter(BaseAdapter):
     def fetch(self) -> list[Item]:
-        now = datetime.now(timezone.utc)
+        now = self._clock()
         cutoff = now - timedelta(days=_LOOKBACK_DAYS)
         items: list[Item] = []
         for row in parse_homepage(_get_text(self.source.endpoint)):
