@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import FIXTURE_NOW
 from sweepreader.config import AppConfig
 from sweepreader.render.page import render_page
 from sweepreader.store import Store, StateStore
@@ -77,7 +78,7 @@ def test_render_page_produces_html(tmp_dirs, monkeypatch):
     import sweepreader.render.page as page_mod
     monkeypatch.setattr(page_mod, "_DOCS_DIR", docs_dir)
 
-    render_page(config, store, state)
+    render_page(config, store, state, now=FIXTURE_NOW)
 
     index = docs_dir / "index.html"
     assert index.exists()
@@ -133,7 +134,7 @@ def test_render_page_ranked_order(tmp_dirs, monkeypatch):
     original_hash = config.config_hash
     config.config_hash = lambda: "h"
 
-    render_page(config, store, state)
+    render_page(config, store, state, now=now)
     content = (docs_dir / "index.html").read_text()
 
     d_pos = content.find("High Relevance D")
@@ -167,7 +168,7 @@ def test_render_tags_chips_and_filter_bar(tmp_dirs, monkeypatch):
     monkeypatch.setattr(page_mod, "_DOCS_DIR", docs_dir)
     config.config_hash = lambda: "h"
 
-    render_page(config, store, state)
+    render_page(config, store, state, now=now)
     content = (docs_dir / "index.html").read_text()
 
     # Chips on the card + data-tags attribute for client filtering
@@ -207,7 +208,7 @@ def test_suppressed_not_in_main_body(tmp_dirs, monkeypatch):
     monkeypatch.setattr(page_mod, "_DOCS_DIR", docs_dir)
     config.config_hash = lambda: "h2"
 
-    render_page(config, store, state)
+    render_page(config, store, state, now=now)
     content = (docs_dir / "index.html").read_text()
 
     # Item should appear in suppressed section, not in cards
@@ -241,7 +242,7 @@ def test_render_today_button_and_is_today_attribute(tmp_dirs, monkeypatch):
     monkeypatch.setattr(page_mod, "_DOCS_DIR", docs_dir)
     config.config_hash = lambda: "h"
 
-    render_page(config, store, state)
+    render_page(config, store, state, now=now)
     content = (docs_dir / "index.html").read_text()
 
     assert 'id="scrubber-today"' in content

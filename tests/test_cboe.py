@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
+from tests.conftest import FIXTURE_NOW
 from sweepreader.config import SourceConfig
 from sweepreader.ingest import cboe
 from sweepreader.ingest.rss import RssAdapter
@@ -113,7 +114,7 @@ def test_rss_adapter_enriches_cboe_item():
         return _resp(rev_html if "revision-history" in url else feed)
 
     with patch("httpx.get", side_effect=fake_get):
-        items = RssAdapter(_cboe_source()).fetch()
+        items = RssAdapter(_cboe_source(), now=FIXTURE_NOW).fetch()
 
     assert len(items) == 1
     item = items[0]

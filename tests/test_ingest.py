@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.conftest import FIXTURE_NOW
 from sweepreader.config import SourceConfig
 from sweepreader.ingest.rss import RssAdapter
 from sweepreader.ingest.federal_register import FederalRegisterAdapter
@@ -43,7 +44,7 @@ def test_rss_adapter_parses_fixture():
     mock_resp.raise_for_status = MagicMock()
 
     with patch("sweepreader.ingest.rss.httpx.get", return_value=mock_resp):
-        items = RssAdapter(rss_source()).fetch()
+        items = RssAdapter(rss_source(), now=FIXTURE_NOW).fetch()
 
     assert len(items) == 2
     assert items[0].venue == "CBOE"
@@ -59,9 +60,9 @@ def test_rss_adapter_stable_ids():
     mock_resp.raise_for_status = MagicMock()
 
     with patch("sweepreader.ingest.rss.httpx.get", return_value=mock_resp):
-        items1 = RssAdapter(rss_source()).fetch()
+        items1 = RssAdapter(rss_source(), now=FIXTURE_NOW).fetch()
     with patch("sweepreader.ingest.rss.httpx.get", return_value=mock_resp):
-        items2 = RssAdapter(rss_source()).fetch()
+        items2 = RssAdapter(rss_source(), now=FIXTURE_NOW).fetch()
 
     assert items1[0].id == items2[0].id
     assert items1[1].id == items2[1].id
@@ -75,7 +76,7 @@ def test_federal_register_adapter_parses_fixture():
 
     # The fixture has 2 results (< per_page), so pagination stops after page 1.
     with patch("sweepreader.ingest.federal_register.httpx.get", return_value=mock_resp):
-        items = FederalRegisterAdapter(fr_source()).fetch()
+        items = FederalRegisterAdapter(fr_source(), now=FIXTURE_NOW).fetch()
 
     assert len(items) == 2
     memx_item = next(i for i in items if "MEMX" in i.title)
@@ -111,7 +112,7 @@ def test_federal_register_stable_ids():
     mock_resp.raise_for_status = MagicMock()
     def run():
         with patch("sweepreader.ingest.federal_register.httpx.get", return_value=mock_resp):
-            return FederalRegisterAdapter(fr_source()).fetch()
+            return FederalRegisterAdapter(fr_source(), now=FIXTURE_NOW).fetch()
 
     ids1 = [i.id for i in run()]
     ids2 = [i.id for i in run()]
