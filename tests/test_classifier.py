@@ -146,3 +146,14 @@ def test_no_api_key_raises():
         os.environ.pop("OPENROUTER_API_KEY", None)
         with pytest.raises(ValueError, match="OPENROUTER_API_KEY"):
             OpenRouterClient()
+
+
+def test_non_english_response_is_rejected():
+    """The model occasionally answers in Chinese; that must trigger a retry
+    rather than storing an unreadable summary."""
+    from sweepreader.classify.classifier import _validate_response
+    ok = {"relevance": 70, "tier": "B", "venues": [], "rationale": "r",
+          "summary": "NYSE Arca will extend trading hours."}
+    assert _validate_response(ok) is True
+    cjk = dict(ok, summary="NYSE Arca宣布自2026年12月6日起延长交易时间至23小时。")
+    assert _validate_response(cjk) is False

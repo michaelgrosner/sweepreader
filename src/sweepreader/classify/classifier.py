@@ -74,6 +74,8 @@ Respond ONLY with valid JSON matching this schema:
 }}
 No other text — just the JSON object.
 
+Write all output in English.
+
 Summary style: lead with the substance — which rule, field, message type, order
 type, symbol set or session changes, and the dates that matter. Omit generic
 closers ("engineers should update their systems", "warrants review"); the reader
@@ -89,7 +91,18 @@ Text:
 {item.raw_text[:3000]}"""
 
 
+def _has_cjk(s: str) -> bool:
+    return any("\u4e00" <= c <= "\u9fff" or "\u3040" <= c <= "\u30ff" for c in s)
+
+
 def _validate_response(data: dict) -> bool:
+    # The model occasionally answers in Chinese despite the instruction (~2% of
+    # calls observed). Treat it as an invalid response so the retry loop runs
+    # rather than storing an unreadable summary.
+    for field in ("summary", "rationale"):
+        val = data.get(field)
+        if isinstance(val, str) and _has_cjk(val):
+            return False
     if not isinstance(data.get("relevance"), int):
         return False
     if data.get("tier") not in ("A", "B", "C", "D", "E"):
@@ -201,7 +214,9 @@ class OpenRouterClient(LlmClient):
                         "model": config.model,
                         "messages": [{"role": "user", "content": prompt}],
                         "temperature": 0.1,
-                        "max_tokens": 1024,
+                        # Summary guidance produces longer output; 1024 truncated
+                        # the JSON mid-object and lost items to the fallback.
+                        "max_tokens": 2048,
                     },
                     timeout=60.0,
                 )
