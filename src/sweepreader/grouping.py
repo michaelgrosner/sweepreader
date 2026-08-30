@@ -35,6 +35,36 @@ def _norm_title(title: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9 ]", " ", title.lower()).split())
 
 
+# Sibling legal entities within one exchange group. An exchange group files the
+# same rule change separately for each of its exchanges, so the Federal Register
+# carries near-identical notices differing only by entity name — both in the
+# "Self-Regulatory Organizations; <ENTITY>;" prefix and inside the subject
+# ("MIAX Emerald Price Improvement Mechanism" vs "MIAX Price Improvement
+# Mechanism"). Neutralizing these tokens lets the parallel filings share a key.
+# Only ever applied within a single exchange group on a single day.
+_SRO_ENTITY_TOKENS: dict[str, frozenset[str]] = {
+    "MIAX": frozenset({"miax", "miami", "international", "securities", "emerald",
+                       "pearl", "sapphire"}),
+    "NASDAQ": frozenset({"nasdaq", "ise", "mrx", "gemx", "phlx", "bx", "omx",
+                         "stock", "market"}),
+    "NYSE": frozenset({"nyse", "arca", "american", "national", "texas", "chicago",
+                       "bonds"}),
+    "CBOE": frozenset({"cboe", "bzx", "byx", "edgx", "edga", "bze", "c1", "c2"}),
+}
+_SRO_GENERIC_TOKENS = frozenset({"llc", "inc", "exchange", "exchanges", "the", "s"})
+
+_SRO_PREFIX = re.compile(r"^self\s+regulatory\s+organizations\s+", re.I)
+
+
+def _sro_subject(title: str, group: str) -> str:
+    """Federal Register title reduced to its subject, with the filing entity's
+    identity removed so sibling filings collapse together."""
+    norm = _norm_title(title)
+    norm = _SRO_PREFIX.sub("", norm)
+    drop = _SRO_ENTITY_TOKENS.get(group, frozenset()) | _SRO_GENERIC_TOKENS
+    return " ".join(w for w in norm.split() if w not in drop)
+
+
 def _group_key(item: "Item") -> tuple[str, ...] | None:
     """Exact blocking key, or None if the item should never be grouped.
 
@@ -56,6 +86,14 @@ def _group_key(item: "Item") -> tuple[str, ...] | None:
         # The URL carried a market counter or a page tail, so the stem is
         # evidence of fan-out rather than just the path.
         return ("slug", vg, stem)
+
+    if item.source_id.startswith("fed_register"):
+        # Parallel filings by sibling entities are one regulatory action. These are
+        # candidates only — the model still has to confirm, and it sees the full
+        # titles with entity names intact so it can reject a false pairing.
+        subject = _sro_subject(item.title, vg)
+        if subject:
+            return ("sro", vg, subject, day)
 
     title = _norm_title(item.title)
     if not title:

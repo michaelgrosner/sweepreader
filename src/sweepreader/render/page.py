@@ -60,6 +60,18 @@ def _is_today(dt: datetime, now: datetime) -> bool:
     return d >= today_start
 
 
+def _consistent_members(
+    group: "Group",
+    member_to_group: dict[str, "Group"],
+    by_id: dict[str, "Item"],
+) -> list["Item"]:
+    """Members that are present and still resolve to this group."""
+    return [
+        by_id[m] for m in group.member_ids
+        if m in by_id and member_to_group.get(m) is group
+    ]
+
+
 def _collapse(
     visible: list[tuple["Item", "Classification", float]],
     suppressed: list[tuple["Item", "Classification"]],
@@ -76,8 +88,13 @@ def _collapse(
     listed separately.
     """
     by_id = {i.id: i for i in items}
+
+    # The group store is append-only and group_id encodes membership, so a group
+    # whose membership later changed leaves its old record behind. Both records
+    # claim the shared members. Resolve newest-wins, then keep only members that
+    # agree on the same group so a card can never show a stale membership.
     member_to_group: dict[str, "Group"] = {}
-    for g in groups.values():
+    for g in sorted(groups.values(), key=lambda x: x.decided_at):
         for mid in g.member_ids:
             member_to_group[mid] = g
 
@@ -95,7 +112,7 @@ def _collapse(
             continue                          # absorbed into the card already emitted
         seen_groups.add(group.group_id)
 
-        members = [by_id[m] for m in group.member_ids if m in by_id]
+        members = _consistent_members(group, member_to_group, by_id)
         if len(members) < 2:
             cards.append(Card(item=item, cls=cls, score=score,
                               tags=list(cls.tags), summary=cls.summary,
@@ -149,7 +166,7 @@ def _collapse(
         if group.group_id in seen_sup:
             continue
         seen_sup.add(group.group_id)
-        members = [by_id[m] for m in group.member_ids if m in by_id]
+        members = _consistent_members(group, member_to_group, by_id)
         if len(members) < 2:
             sup_cards.append(Card(item=item, cls=cls, score=0.0,
                                   tags=list(cls.tags), summary=cls.summary,

@@ -268,3 +268,88 @@ def _cfg():
                      profile_prompt="p",
                      tier_weights={"A": 1.0, "B": 0.85, "C": 0.55, "D": 0.4, "E": 0.1},
                      sources=[], max_age_days=183)
+
+
+# --- parallel SRO filings by sibling entities -------------------------------
+
+def _fr(iid, entity, subject, venue, day=None):
+    return make_item(iid, venue=venue, source_id="fed_register_sro",
+                     title=f"Self-Regulatory Organizations; {entity}; {subject}",
+                     url=f"https://federalregister.gov/{iid}", published=day)
+
+
+def test_sibling_miax_entities_group():
+    """MIAX files the same rule change separately per exchange; the entity name
+    also appears inside the subject."""
+    subj_a = ("Notice of Filing and Immediate Effectiveness of a Proposed Rule Change To "
+              "Delay Implementation of a Change to Rule 515A, MIAX Emerald Price Improvement "
+              'Mechanism ("PRIME") and PRIME Solicitation Mechanism')
+    subj_b = ("Notice of Filing and Immediate Effectiveness of a Proposed Rule Change To "
+              "Delay Implementation of a Change to Rule 515A, MIAX Price Improvement "
+              'Mechanism ("PRIME") and PRIME Solicitation Mechanism')
+    items = [_fr("a", "MIAX Emerald, LLC", subj_a, "MIAX"),
+             _fr("b", "Miami International Securities Exchange, LLC", subj_b, "MIAX")]
+    groups = candidate_groups(items)
+    assert len(groups) == 1 and len(groups[0]) == 2
+
+
+def test_sibling_nasdaq_entities_group():
+    subj = ("Notice of Filing and Immediate Effectiveness of Proposed Rule Change To Amend "
+            "the Exchange's Connectivity Schedule and Discontinue a Previously Proposed Offering")
+    items = [_fr("a", "Nasdaq MRX, LLC", subj, "NASDAQ"),
+             _fr("b", "Nasdaq ISE, LLC", subj, "NASDAQ")]
+    assert len(candidate_groups(items)) == 1
+
+
+def test_sro_grouping_still_respects_exchange_group():
+    subj = "Notice of Filing To Amend the Fee Schedule"
+    items = [_fr("a", "MIAX Emerald, LLC", subj, "MIAX"),
+             _fr("b", "Cboe BZX Exchange, Inc.", subj, "CBOE")]
+    assert candidate_groups(items) == []
+
+
+def test_sro_grouping_still_respects_the_day():
+    subj = "Notice of Filing To Amend the Fee Schedule"
+    items = [_fr("a", "MIAX Emerald, LLC", subj, "MIAX"),
+             _fr("b", "MIAX PEARL, LLC", subj, "MIAX", day=FIXTURE_NOW + timedelta(days=2))]
+    assert candidate_groups(items) == []
+
+
+def test_different_sro_subjects_do_not_group():
+    items = [_fr("a", "MIAX Emerald, LLC", "Notice of Filing To Amend the Fee Schedule", "MIAX"),
+             _fr("b", "MIAX PEARL, LLC", "Notice of Filing To Adopt a New Order Type", "MIAX")]
+    assert candidate_groups(items) == []
+
+
+# --- stale group records ----------------------------------------------------
+
+def test_superseded_group_does_not_claim_members(tmp_path):
+    """group_id encodes membership, so a grown group leaves the old record behind
+    and both claim the shared members. Newest must win."""
+    from datetime import datetime as _dt
+
+    from sweepreader.render.page import _collapse
+    from sweepreader.store.models import Classification
+
+    base = "https://www.miaxglobal.com/alert/2026/06/21/daylight"
+    a = make_item("a", venue="MIAX Options", title="Daylight", url=base + "-0")
+    b = make_item("b", venue="MIAX Pearl", title="Daylight", url=base + "-2")
+    c = make_item("c", venue="MIAX Emerald", title="Daylight", url=base + "-3")
+    items = [a, b, c]
+
+    def cls(iid):
+        return Classification(item_id=iid, model="m", config_hash="h",
+                              classified_at=FIXTURE_NOW, relevance=80, tier="A",
+                              rationale="r", summary="s")
+    classifications = {i.id: cls(i.id) for i in items}
+
+    old = Group(group_id=Group.make_id(["a", "b"]), member_ids=["a", "b"],
+                canonical_id="a", decided_at=_dt(2026, 6, 20, tzinfo=timezone.utc))
+    new = Group(group_id=Group.make_id(["a", "b", "c"]), member_ids=["a", "b", "c"],
+                canonical_id="a", decided_at=_dt(2026, 6, 21, tzinfo=timezone.utc))
+
+    visible = [(i, classifications[i.id], 10.0) for i in items]
+    cards, _ = _collapse(visible, [], {old.group_id: old, new.group_id: new},
+                         items, classifications)
+    assert len(cards) == 1
+    assert cards[0].member_count == 3
