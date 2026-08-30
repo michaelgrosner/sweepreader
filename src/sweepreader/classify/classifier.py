@@ -50,6 +50,9 @@ def _tag_guidance() -> str:
 
 
 def _build_prompt(item: "Item", config: "AppConfig", suppress_threshold: int) -> str:
+    # Ordering matters: all config-static content (role, tiers, tags, schema) comes
+    # first so it forms a stable prefix the provider can cache across items in a run;
+    # the per-item block must stay last. Don't move it back up.
     tier_desc = "\n".join(f"  {k}: {v}" for k, v in _TIER_DESCRIPTIONS.items())
     return f"""You are classifying a financial regulatory item for relevance to:
 {config.profile_prompt.strip()}
@@ -60,14 +63,6 @@ Tier definitions:
 Tag axes (pick ONLY applicable tags from these exact values; omit any that don't apply):
 {_tag_guidance()}
 
-Item to classify:
-Title: {item.title}
-Source: {item.source_id}
-Venue: {item.venue}
-Published: {item.published_at.strftime("%Y-%m-%d")}
-Text:
-{item.raw_text[:3000]}
-
 Respond ONLY with valid JSON matching this schema:
 {{
   "relevance": <integer 0-100>,
@@ -77,8 +72,15 @@ Respond ONLY with valid JSON matching this schema:
   "rationale": <1-2 sentence rationale>,
   "summary": <2-3 sentence summary for the reader, or null if relevance < {suppress_threshold}>
 }}
+No other text — just the JSON object.
 
-No other text — just the JSON object."""
+Classify the item below:
+Title: {item.title}
+Source: {item.source_id}
+Venue: {item.venue}
+Published: {item.published_at.strftime("%Y-%m-%d")}
+Text:
+{item.raw_text[:3000]}"""
 
 
 def _validate_response(data: dict) -> bool:
