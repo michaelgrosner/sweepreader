@@ -55,7 +55,7 @@ class Store:
         self._class_dir.mkdir(parents=True, exist_ok=True)
 
         self._known_item_ids: set[str] = set()
-        self._known_class_keys: set[tuple[str, str, str]] = set()
+        self._known_class_keys: set[tuple[str, str]] = set()
         self._cls_lock = threading.Lock()
         self._load_indexes()
 
