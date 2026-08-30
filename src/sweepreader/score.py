@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from sweepreader.config import AppConfig, TierLabel
-    from sweepreader.store.models import Item, Classification
+    from sweepreader.store.models import Classification, Item
 
 _HALF_LIFE_DAYS = 7.0
 

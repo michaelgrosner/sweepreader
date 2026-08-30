@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import logging
-import smtplib
 import os
-from datetime import datetime, timezone, timedelta
+import smtplib
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -15,7 +15,7 @@ from sweepreader.score import rank_items
 
 if TYPE_CHECKING:
     from sweepreader.config import AppConfig
-    from sweepreader.store import Store, StateStore
+    from sweepreader.store import StateStore, Store
 
 logger = logging.getLogger(__name__)
 

@@ -1,18 +1,15 @@
 """Golden-file test for the page renderer."""
 from __future__ import annotations
 
-import json
-import tempfile
-from datetime import datetime, timezone, timedelta
-from pathlib import Path
+from datetime import datetime, timezone
 
 import pytest
 
-from tests.conftest import FIXTURE_NOW
 from sweepreader.config import AppConfig
 from sweepreader.render.page import render_page
-from sweepreader.store import Store, StateStore
-from sweepreader.store.models import Item, Classification
+from sweepreader.store import StateStore, Store
+from sweepreader.store.models import Classification, Item
+from tests.conftest import FIXTURE_NOW
 
 
 def make_config() -> AppConfig:
@@ -131,7 +128,6 @@ def test_render_page_ranked_order(tmp_dirs, monkeypatch):
 
     # Patch config_hash to match stored classifications
     config._stored_hash = "h"
-    original_hash = config.config_hash
     config.config_hash = lambda: "h"
 
     render_page(config, store, state, now=now)

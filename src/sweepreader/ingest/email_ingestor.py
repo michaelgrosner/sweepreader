@@ -14,7 +14,7 @@ from sweepreader.ingest.base import BaseAdapter
 from sweepreader.store.models import Item
 
 if TYPE_CHECKING:
-    from sweepreader.config import SourceConfig
+    pass
 
 logger = logging.getLogger(__name__)
 

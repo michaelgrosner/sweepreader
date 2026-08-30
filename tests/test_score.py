@@ -1,10 +1,8 @@
-from datetime import datetime, timezone, timedelta
-
-import pytest
+from datetime import datetime, timedelta, timezone
 
 from sweepreader.config import AppConfig
 from sweepreader.score import compute_score, is_suppressed, rank_items, recency_decay
-from sweepreader.store.models import Item, Classification
+from sweepreader.store.models import Classification, Item
 
 
 def make_config() -> AppConfig:

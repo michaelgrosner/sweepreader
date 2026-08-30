@@ -5,12 +5,10 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from tests.conftest import FIXTURE_NOW
 from sweepreader.config import SourceConfig
-from sweepreader.ingest.rss import RssAdapter
 from sweepreader.ingest.federal_register import FederalRegisterAdapter
+from sweepreader.ingest.rss import RssAdapter
+from tests.conftest import FIXTURE_NOW
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -88,7 +86,8 @@ def test_federal_register_adapter_parses_fixture():
 
 
 def test_federal_register_seed_first_seen_is_published():
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
+
     from sweepreader.ingest import federal_register as fr
     payload = json.loads((FIXTURES / "federal_register_response.json").read_text())
     mock_resp = MagicMock()

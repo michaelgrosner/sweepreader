@@ -1,16 +1,16 @@
 """Offline tests for EmailIngestor using a fixture .eml file."""
 from __future__ import annotations
 
-import email
 import imaplib
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from sweepreader.config import SourceConfig
-from sweepreader.ingest.email_ingestor import EmailIngestor, _html_to_text, _extract_text
+from sweepreader.ingest.email_ingestor import (
+    EmailIngestor,
+    _html_to_text,
+)
 from sweepreader.store.store import StateStore
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -82,7 +82,7 @@ def test_email_ingestor_advances_watermark():
                 "IMAP_USER": "you@gmail.com",
                 "IMAP_PASSWORD": "testpass",
             }):
-                items = ingestor.fetch()
+                ingestor.fetch()
 
         assert ingestor._get_watermark() == 55
 

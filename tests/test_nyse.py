@@ -1,7 +1,7 @@
 """Offline tests for the NYSE Trader Updates adapter."""
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import sweepreader.ingest.nyse as nyse

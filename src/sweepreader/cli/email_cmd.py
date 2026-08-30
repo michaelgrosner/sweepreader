@@ -4,7 +4,7 @@ import logging
 
 from sweepreader.config import load_config
 from sweepreader.render.email_render import render_email
-from sweepreader.store import Store, StateStore
+from sweepreader.store import StateStore, Store
 
 logger = logging.getLogger(__name__)
 

@@ -14,12 +14,12 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Iterator
 
 import httpx
 
-from sweepreader.ingest.base import BaseAdapter, _USER_AGENT
+from sweepreader.ingest.base import _USER_AGENT, BaseAdapter
 from sweepreader.ingest.html_text import html_to_text
 from sweepreader.store.models import Item
 

@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 
 from sweepreader.config import AppConfig
 from sweepreader.render.email_render import render_email
-from sweepreader.store import Store, StateStore
-from sweepreader.store.models import Item, Classification
+from sweepreader.store import StateStore, Store
+from sweepreader.store.models import Classification, Item
 
 
 def _config() -> AppConfig:

@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from sweepreader.config import load_config
 from sweepreader.classify.classifier import OpenRouterClient, keyword_fallback
+from sweepreader.config import load_config
 from sweepreader.score import rank_items
 from sweepreader.store import Store
 

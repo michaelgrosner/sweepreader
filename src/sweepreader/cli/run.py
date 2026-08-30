@@ -5,12 +5,12 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
+from sweepreader.classify.classifier import OpenRouterClient, keyword_fallback
 from sweepreader.config import load_config
 from sweepreader.ingest.base import fetch_source
 from sweepreader.ingest.cluster import assign_clusters
-from sweepreader.classify.classifier import OpenRouterClient, keyword_fallback
-from sweepreader.store import Store, StateStore
 from sweepreader.render import render_page
+from sweepreader.store import StateStore, Store
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,6 @@ def _run_parallel(items, existing_clss, llm, config, config_hash, dry_run, store
     total = len(items)
     if total == 0:
         return
-    counter = threading.local()
     done_count = [0]
     done_lock = threading.Lock()
 

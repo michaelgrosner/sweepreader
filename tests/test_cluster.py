@@ -27,7 +27,7 @@ def test_same_filing_clusters_together():
     item_venue = make_item("memx_1", "memx_notices",
                            "MEMX Filing SR-MEMX-2026-15: New Order Type")
 
-    result = assign_clusters([item_fr, item_venue])
+    assign_clusters([item_fr, item_venue])
     assert item_fr.cluster_id == item_venue.cluster_id, "Same filing should be in same cluster"
 
 

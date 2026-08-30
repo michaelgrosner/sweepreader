@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -12,7 +12,7 @@ from sweepreader.tags import TAG_AXES
 
 if TYPE_CHECKING:
     from sweepreader.config import AppConfig
-    from sweepreader.store import Store, StateStore
+    from sweepreader.store import StateStore, Store
 
 logger = logging.getLogger(__name__)
 

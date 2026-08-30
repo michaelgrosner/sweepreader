@@ -1,4 +1,4 @@
-from sweepreader.store.models import Item, Classification
-from sweepreader.store.store import Store, StateStore
+from sweepreader.store.models import Classification, Item
+from sweepreader.store.store import StateStore, Store
 
 __all__ = ["Item", "Classification", "Store", "StateStore"]

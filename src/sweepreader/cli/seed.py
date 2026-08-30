@@ -8,12 +8,12 @@ is intentionally left to ``run``/``backtest`` (only uncached combos cost tokens)
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Iterator
 
 from sweepreader.classify.classifier import keyword_fallback
 from sweepreader.config import load_config
-from sweepreader.ingest import nyse, miax, iex, federal_register, opra
+from sweepreader.ingest import federal_register, iex, miax, nyse, opra
 from sweepreader.ingest.http_cache import HttpCache
 from sweepreader.store import Store
 from sweepreader.store.models import Item

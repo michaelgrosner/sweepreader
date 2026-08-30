@@ -7,9 +7,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sweepreader.classify.classifier import OpenRouterClient, keyword_fallback, _extract_json
+from sweepreader.classify.classifier import (
+    OpenRouterClient,
+    _extract_json,
+    keyword_fallback,
+)
 from sweepreader.config import AppConfig
-from sweepreader.store.models import Item, Classification
+from sweepreader.store.models import Item
 
 
 def make_config() -> AppConfig:

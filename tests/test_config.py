@@ -1,7 +1,8 @@
-import pytest
-import textwrap
 import tempfile
+import textwrap
 from pathlib import Path
+
+import pytest
 
 from sweepreader.config import load_config
 
@@ -101,7 +102,7 @@ def test_max_age_days_must_be_positive():
 
 
 def test_max_age_cutoff_helper():
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
     cfg = load_config(write_config(MINIMAL))
     assert cfg.max_age_days == 183
     now = datetime(2026, 6, 20, tzinfo=timezone.utc)

@@ -1,7 +1,7 @@
 """Offline tests for the OPRA notices adapter."""
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import sweepreader.ingest.opra as opra

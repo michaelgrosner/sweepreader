@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Iterator
 
 import httpx
 
-from sweepreader.ingest.base import BaseAdapter, _USER_AGENT
+from sweepreader.ingest.base import _USER_AGENT, BaseAdapter
 from sweepreader.store.models import Item
 
 logger = logging.getLogger(__name__)

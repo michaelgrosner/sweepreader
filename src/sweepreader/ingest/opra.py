@@ -9,13 +9,13 @@ The PDF holds the real notice body, extracted via the shared `pdf_text` helper.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Iterator
 
 import httpx
 from selectolax.parser import HTMLParser
 
-from sweepreader.ingest.base import BaseAdapter, _USER_AGENT
+from sweepreader.ingest.base import _USER_AGENT, BaseAdapter
 from sweepreader.ingest.pdf_text import pdf_to_text
 from sweepreader.store.models import Item
 

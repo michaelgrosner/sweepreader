@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
@@ -11,11 +11,11 @@ import feedparser
 import httpx
 
 from sweepreader.ingest import cboe
-from sweepreader.ingest.base import BaseAdapter, _USER_AGENT
+from sweepreader.ingest.base import _USER_AGENT, BaseAdapter
 from sweepreader.store.models import Item
 
 if TYPE_CHECKING:
-    from sweepreader.config import SourceConfig
+    pass
 
 logger = logging.getLogger(__name__)
 

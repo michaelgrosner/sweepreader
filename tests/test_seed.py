@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 from argparse import Namespace
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-import sweepreader.ingest.nyse as nyse
-import sweepreader.ingest.miax as miax
 import sweepreader.cli.seed as seedmod
+import sweepreader.ingest.miax as miax
+import sweepreader.ingest.nyse as nyse
 from sweepreader.config import AppConfig, SourceConfig
 
 

@@ -1,10 +1,9 @@
 import tempfile
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import pytest
 
-from sweepreader.store.models import Item, Classification
+from sweepreader.store.models import Classification, Item
 from sweepreader.store.store import Store
 
 

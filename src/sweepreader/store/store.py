@@ -5,9 +5,8 @@ import logging
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
-from sweepreader.store.models import Item, Classification
+from sweepreader.store.models import Classification, Item
 
 logger = logging.getLogger(__name__)
 

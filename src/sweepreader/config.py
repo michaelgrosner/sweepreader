@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
 import yaml
-
 
 Modality = Literal["api", "rss", "email", "scrape"]
 ParseStrategy = Literal[

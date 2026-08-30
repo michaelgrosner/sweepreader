@@ -5,10 +5,10 @@ import json
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
-from tests.conftest import FIXTURE_NOW
 from sweepreader.config import SourceConfig
 from sweepreader.ingest import cboe
 from sweepreader.ingest.rss import RssAdapter
+from tests.conftest import FIXTURE_NOW
 
 SPEC_URL = (
     "https://www.cboe.com/document/tech-spec/content/technical-specifications/"
