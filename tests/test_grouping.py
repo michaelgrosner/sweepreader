@@ -353,3 +353,42 @@ def test_superseded_group_does_not_claim_members(tmp_path):
                          items, classifications)
     assert len(cards) == 1
     assert cards[0].member_count == 3
+
+
+# --- multi-key matching -----------------------------------------------------
+
+def test_base_url_groups_with_its_counter_siblings():
+    """MIAX serves the base alert at `.../interface` and siblings at `-0`, `-2`.
+    Keying each item only one way put the base on a title key and the siblings on
+    a slug key, so an identical-titled pair never matched."""
+    base = "https://www.miaxglobal.com/alert/2026/06/21/pearl-sapphire-updated-interface"
+    title = "MIAX Pearl Options & MIAX Sapphire Options Exchanges - Updated Interface Specifications"
+    items = [
+        make_item("a", venue="MIAX Pearl", title=title, url=base + "-0"),
+        make_item("b", venue="MIAX Sapphire", title=title, url=base),
+    ]
+    groups = candidate_groups(items)
+    assert len(groups) == 1 and len(groups[0]) == 2
+
+
+def test_nyse_fragment_urls_do_not_all_collapse():
+    """Every NYSE trader update lives at /trader-update/history and is identified
+    only by the fragment. Dropping it chained 35 unrelated notices into one group."""
+    titles = [
+        "NYSE Bonds - Redemptions - Traded Bonds",
+        "NYSE American Equities - Trading Resumption in BRBS",
+        "NYSE Arca: Extended Hours Trading Effective December 6, 2026",
+    ]
+    items = [
+        make_item(f"n{i}", venue="NYSE Bonds", title=t,
+                  url=f"https://www.nyse.com/trader-update/history#11000095944{i}",
+                  source_id="nyse_trader_updates")
+        for i, t in enumerate(titles)
+    ]
+    assert candidate_groups(items) == []
+
+
+def test_slug_stem_keeps_the_fragment():
+    a = "https://www.nyse.com/trader-update/history#110000959449"
+    b = "https://www.nyse.com/trader-update/history#110000959448"
+    assert slug_stem(a) != slug_stem(b)

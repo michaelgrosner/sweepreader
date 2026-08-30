@@ -47,12 +47,17 @@ def slug_stem(url: str) -> str:
     Cboe serves one spec at both `.../specification` and `.../specification/overview`.
     Both collapse to the same stem.
     """
-    path = urlparse(url).path.rstrip("/")
+    parsed = urlparse(url)
+    path = parsed.path.rstrip("/")
     for tail in _PAGE_TAILS:
         if path.endswith(tail):
             path = path[: -len(tail)]
             break
-    return _TRAILING_COUNTER.sub("", path)
+    path = _TRAILING_COUNTER.sub("", path)
+    # NYSE serves every trader update from /trader-update/history and identifies
+    # the notice only in the fragment, so the fragment is part of the document
+    # identity and must not be dropped — without it all NYSE notices share a stem.
+    return f"{path}#{parsed.fragment}" if parsed.fragment else path
 
 
 def _filing_number(item: "Item") -> str | None:

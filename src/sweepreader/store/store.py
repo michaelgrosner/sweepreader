@@ -121,11 +121,16 @@ class Store:
             self._known_class_keys.add(key)
         return True
 
-    def append_group(self, group: Group) -> bool:
+    def append_group(self, group: Group, *, supersede: bool = False) -> bool:
         """Append a group record. group_id encodes membership, so re-deriving an
-        unchanged group is a no-op and the LLM summary is not regenerated."""
+        unchanged group is a no-op and the LLM summary is not regenerated.
+
+        `supersede` allows an upgraded decision (heuristic -> llm) to be written
+        for a group_id already present; groups_as_of takes the latest by
+        decided_at, so the newer record wins.
+        """
         with self._cls_lock:
-            if group.group_id in self._known_group_ids:
+            if group.group_id in self._known_group_ids and not supersede:
                 return False
             shard = _shard_key(group.decided_at)
             path = self._group_dir / f"{shard}.jsonl"

@@ -14,7 +14,6 @@ import logging
 import re
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from urllib.parse import urlparse
 
 from sweepreader.ingest.cluster import (
     _filing_number,
@@ -65,56 +64,84 @@ def _sro_subject(title: str, group: str) -> str:
     return " ".join(w for w in norm.split() if w not in drop)
 
 
-def _group_key(item: "Item") -> tuple[str, ...] | None:
-    """Exact blocking key, or None if the item should never be grouped.
+def _group_keys(item: "Item") -> list[tuple[str, ...]]:
+    """All exact keys this item can group on. Items sharing ANY key group together.
 
-    Deliberately exact rather than fuzzy. An earlier attempt used pairwise title
-    similarity with union-find, which chained 35 unrelated NYSE notices into one
-    group through transitivity — single-linkage clustering on formulaic titles
-    ("NYSE Bonds - Redemptions..." vs "NYSE Bonds - Addition...") merges almost
-    everything. Exact keys cannot chain.
+    An item needs more than one key because the same fan-out shows up differently
+    per member: MIAX serves the base alert at `.../interface` and its siblings at
+    `.../interface-0`, `-2`, `-3`. Keying each item a single way put the base URL
+    on a title key and its siblings on a slug key, so they never matched despite
+    having the same stem AND the same title.
+
+    Every key is exact — no fuzzy similarity. That is what keeps the transitive
+    union safe; an earlier similarity-based version chained 35 unrelated NYSE
+    notices into one group.
     """
-    filing = _filing_number(item)
-    if filing:
-        return ("filing", filing)
-
+    keys: list[tuple[str, ...]] = []
     vg = venue_group(item.venue)
     day = item.published_at.date().isoformat()
 
+    filing = _filing_number(item)
+    if filing:
+        keys.append(("filing", filing))
+
     stem = slug_stem(item.url)
-    if stem and stem != urlparse(item.url).path.rstrip("/"):
-        # The URL carried a market counter or a page tail, so the stem is
-        # evidence of fan-out rather than just the path.
-        return ("slug", vg, stem)
+    if stem:
+        keys.append(("slug", vg, stem))
 
     if item.source_id.startswith("fed_register"):
-        # Parallel filings by sibling entities are one regulatory action. These are
-        # candidates only — the model still has to confirm, and it sees the full
-        # titles with entity names intact so it can reject a false pairing.
+        # Parallel filings by sibling entities are one regulatory action. Candidates
+        # only — the model sees the full titles and can still reject.
         subject = _sro_subject(item.title, vg)
         if subject:
-            return ("sro", vg, subject, day)
+            keys.append(("sro", vg, subject, day))
 
     title = _norm_title(item.title)
-    if not title:
-        return None
-    return ("title", vg, title, day)
+    if title:
+        keys.append(("title", vg, title, day))
+    return keys
+
+
+class _UnionFind:
+    def __init__(self) -> None:
+        self._parent: dict[str, str] = {}
+
+    def find(self, x: str) -> str:
+        self._parent.setdefault(x, x)
+        while self._parent[x] != x:
+            self._parent[x] = self._parent[self._parent[x]]
+            x = self._parent[x]
+        return x
+
+    def union(self, a: str, b: str) -> None:
+        ra, rb = self.find(a), self.find(b)
+        if ra != rb:
+            self._parent[rb] = ra
 
 
 def candidate_groups(items: list["Item"]) -> list[list["Item"]]:
-    """Groups of size >= 2 sharing an exact blocking key."""
-    buckets: dict[tuple[str, ...], list["Item"]] = {}
+    """Groups of size >= 2 connected by at least one shared exact key."""
+    by_id = {i.id: i for i in items}
+    holders: dict[tuple[str, ...], list[str]] = {}
     for item in items:
-        key = _group_key(item)
-        if key is None:
-            continue
-        buckets.setdefault(key, []).append(item)
+        for key in _group_keys(item):
+            holders.setdefault(key, []).append(item.id)
+
+    uf = _UnionFind()
+    for ids in holders.values():
+        for other in ids[1:]:
+            uf.union(ids[0], other)
+
+    buckets: dict[str, list[str]] = {}
+    for iid in by_id:
+        buckets.setdefault(uf.find(iid), []).append(iid)
 
     groups = []
-    for members in buckets.values():
-        if len(members) < 2:
+    for member_ids in buckets.values():
+        if len(member_ids) < 2:
             continue
-        groups.append(sorted(members, key=lambda x: (x.published_at, x.id)))
+        groups.append(sorted((by_id[m] for m in member_ids),
+                             key=lambda x: (x.published_at, x.id)))
     return groups
 
 

@@ -28,7 +28,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_BATCH = 10
+# Ten groups of summaries can overrun the token budget and truncate the JSON,
+# which loses the whole batch to the heuristic fallback.
+_BATCH = 6
 _MAX_MEMBERS_SHOWN = 8
 
 
@@ -115,7 +117,7 @@ def _post(prompt: str, config: "AppConfig", api_key: str) -> dict | None:
                     "model": config.model,
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.1,
-                    "max_tokens": 2048,
+                    "max_tokens": 4096,
                 },
                 timeout=60.0,
             )

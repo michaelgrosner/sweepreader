@@ -41,21 +41,34 @@ def _build_and_store_groups(store, config, now, *, dry_run: bool) -> None:
 
     # group_id encodes membership, so anything already stored is unchanged and
     # must not be re-adjudicated — that is what keeps the LLM summary cached.
-    fresh = [g for g in groups if not store.has_group(g.group_id)]
-    logger.info("groups: %d in window, %d new", len(groups), len(fresh))
-    if not fresh:
+    # Exception: a group left as "heuristic" by a failed adjudication is retried,
+    # otherwise one bad response downgrades it permanently.
+    stored = store.groups_as_of(now)
+    fresh, retry = [], []
+    for g in groups:
+        prev = stored.get(g.group_id)
+        if prev is None:
+            fresh.append(g)
+        elif prev.decided_by == "heuristic":
+            retry.append(g)
+    logger.info("groups: %d in window, %d new, %d retrying adjudication",
+                len(groups), len(fresh), len(retry))
+    if not fresh and not retry:
         return
 
     if config.grouping_llm:
         from sweepreader.classify.grouper import adjudicate
         items_by_id = {i.id: i for i in window_items}
         fresh = adjudicate(fresh, items_by_id, config, now=now)
+        retry = adjudicate(retry, items_by_id, config, now=now)
 
     if dry_run:
-        logger.info("dry-run: not persisting %d group(s)", len(fresh))
+        logger.info("dry-run: not persisting %d group(s)", len(fresh) + len(retry))
         return
     written = sum(1 for g in fresh if store.append_group(g))
-    logger.info("groups: %d persisted", written)
+    upgraded = sum(1 for g in retry
+                   if g.decided_by == "llm" and store.append_group(g, supersede=True))
+    logger.info("groups: %d persisted, %d upgraded", written, upgraded)
 
 
 def _run_parallel(items, existing_clss, llm, config, config_hash, dry_run, store, label):
