@@ -18,7 +18,7 @@ _LOOKBACK_DAYS = 14
 _PER_PAGE = 40
 _MAX_LIVE_PAGES = 10  # the seeder pages without this cap (bounded instead by the date window)
 
-_VENUE_PATTERNS: list[tuple[re.Pattern, str]] = [
+_VENUE_PATTERNS: list[tuple[re.Pattern[str], str | None]] = [
     (re.compile(r'\bCBOE\b|\bCboe\b', re.I), "CBOE"),
     (re.compile(r'\bNYSE\b', re.I), "NYSE"),
     (re.compile(r'\bNASDAQ\b|\bNasdaqtrader\b', re.I), "NASDAQ"),

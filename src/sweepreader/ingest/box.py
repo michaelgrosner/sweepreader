@@ -87,7 +87,7 @@ def parse_listing(html: str) -> list[dict]:
                     date_text = spans[1].text().strip()
         categories = [
             c.removeprefix("notice_category-").replace("-", " ")
-            for c in art.attributes.get("class", "").split()
+            for c in (art.attributes.get("class") or "").split()
             if c.startswith("notice_category-")
         ]
         link = art.css_first("footer a")
@@ -169,7 +169,8 @@ class BoxAdapter(BaseAdapter):
         for entry in feed.entries:
             url = entry.get("link", "")
             pub = entry.get("published_parsed")
-            pub_dt = datetime(*pub[:6], tzinfo=timezone.utc) if pub else now
+            # mypy cannot prove the struct_time slice has length 6; it does.
+            pub_dt = datetime(*pub[:6], tzinfo=timezone.utc) if pub else now  # type: ignore[misc]
             if not url or pub_dt < cutoff:
                 continue
             title = (entry.get("title") or "").strip()

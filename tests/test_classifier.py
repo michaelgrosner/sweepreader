@@ -132,6 +132,7 @@ def test_keyword_fallback_tier_E():
 def test_extract_json_from_fenced():
     text = '```json\n{"relevance": 70, "tier": "B", "venues": [], "rationale": "x"}\n```'
     data = _extract_json(text)
+    assert data is not None
     assert data["relevance"] == 70
 
 

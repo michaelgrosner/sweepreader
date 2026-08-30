@@ -63,7 +63,7 @@ def _extract_text(msg: email.message.Message) -> str:
         ct = part.get_content_type()
         if ct == "text/plain":
             payload = part.get_payload(decode=True)
-            if payload:
+            if isinstance(payload, bytes) and payload:
                 charset = part.get_content_charset("utf-8") or "utf-8"
                 try:
                     parts.append(payload.decode(charset, errors="replace"))
@@ -71,7 +71,7 @@ def _extract_text(msg: email.message.Message) -> str:
                     parts.append(payload.decode("utf-8", errors="replace"))
         elif ct == "text/html" and not parts:
             payload = part.get_payload(decode=True)
-            if payload:
+            if isinstance(payload, bytes) and payload:
                 charset = part.get_content_charset("utf-8") or "utf-8"
                 try:
                     html = payload.decode(charset, errors="replace")
@@ -135,7 +135,8 @@ class EmailIngestor(BaseAdapter):
             uid_watermark = self._get_watermark()
             search_str = f"UID {uid_watermark + 1}:*" if uid_watermark else "ALL"
 
-            _, data = conn.uid("SEARCH", None, search_str)
+            # imaplib._command explicitly skips None args; the stub is stricter.
+            _, data = conn.uid("SEARCH", None, search_str)  # type: ignore[arg-type]
             if not data or not data[0]:
                 return []
 

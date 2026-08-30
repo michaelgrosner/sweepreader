@@ -80,7 +80,7 @@ def fetch_page(page: int, *, system_id: int = _SYSTEM_ID, page_size: int = _PAGE
                timeout: float = 30.0, cache=None) -> tuple[list[dict], int]:
     """One page of notifications, newest first. Returns (records, total_count)."""
     url = _BASE + _LIST_PATH.format(sid=system_id)
-    params = {
+    params: dict[str, str | int] = {
         "pageSize": page_size,
         "pageNumber": page,
         "sortKey": "publishedDate",

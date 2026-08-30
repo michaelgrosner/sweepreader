@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import math
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from sweepreader.config import AppConfig
+    from sweepreader.config import AppConfig, TierLabel
     from sweepreader.store.models import Item, Classification
 
 _HALF_LIFE_DAYS = 7.0
@@ -25,7 +25,9 @@ def compute_score(
     config: "AppConfig",
     as_of: datetime | None = None,
 ) -> float:
-    tier_weight = config.tier_weights.get(cls.tier, 0.10)
+    # cls.tier comes from the LLM and may not be a valid label; the 0.10
+    # default is the intended fallback for anything unrecognised.
+    tier_weight = config.tier_weights.get(cast("TierLabel", cls.tier), 0.10)
     decay = recency_decay(item.published_at, as_of)
     return cls.relevance * tier_weight * decay
 

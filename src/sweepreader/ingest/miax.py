@@ -103,7 +103,7 @@ def _detail_body(url: str, cache=None) -> str:
     try:
         tree = HTMLParser(_get(url, cache=cache))
         art = tree.css_first("article.node--view-mode-full")
-        return html_to_text(art.html if art else tree.html)
+        return html_to_text((art.html if art else tree.html) or "")
     except Exception as e:  # per-item isolation (SPEC §10)
         logger.warning("miax detail fetch failed for %s: %s", url, e)
         return ""
