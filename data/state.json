@@ -1,6 +1,6 @@
 {
   "config_hash": "3587b21cf38c5bce",
-  "failures_this_run": 0,
+  "failures_this_run": 1,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
@@ -71,8 +71,8 @@
       "item_count": 35
     },
     "box_notices": {
-      "status": "ok",
-      "item_count": 3
+      "status": "warning",
+      "warning": "Both listing and fallback feed failed. Listing: Cloudflare block or listing parse error: Client error '403 Forbidden' for url 'https://boxexchange.com/notices'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Feed: Client error '403 Forbidden' for url 'https://boxexchange.com/?post_type=circulars&feed=rss2'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
     },
     "iex_alerts": {
       "status": "ok",
