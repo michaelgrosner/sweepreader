@@ -120,11 +120,22 @@ def cmd_run(args) -> int:
         llm = None
 
     failures = 0
+    now_for_sources = datetime.now(timezone.utc)
     per_source_health: dict = state.get("source_health", {})
 
     all_new_items = []
     for source in config.sources:
         if not source.enabled:
+            continue
+        if not source.is_active(now_for_sources):
+            # A timed-out source is not a failure. Overwrite any stale "error"
+            # health left from before it was disabled, or the alarm would keep
+            # flagging a source we are deliberately not fetching.
+            per_source_health[source.id] = {
+                "status": "disabled",
+                "disabled_until": source.disabled_until.isoformat() if source.disabled_until else None,
+            }
+            logger.info("source=%s skipped until %s", source.id, source.disabled_until)
             continue
         items, warning, err = fetch_source(source, state)
         if err:

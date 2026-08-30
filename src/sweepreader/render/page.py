@@ -228,7 +228,7 @@ def render_page(
     source_health = state.get("source_health", {})
     failures = state.get("failures_this_run", 0)
 
-    enabled_sources = [s for s in config.sources if s.enabled]
+    enabled_sources = [s for s in config.sources if s.is_active(now)]
     coverage_codes = sorted({s.id.replace("_tech", "").replace("_reg", "").upper()[:8] for s in enabled_sources})
 
     env = Environment(

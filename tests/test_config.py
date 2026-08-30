@@ -107,3 +107,57 @@ def test_max_age_cutoff_helper():
     assert cfg.max_age_days == 183
     now = datetime(2026, 6, 20, tzinfo=timezone.utc)
     assert cfg.max_age_cutoff(now) == now - timedelta(days=183)
+
+
+# --- timed source disable ---------------------------------------------------
+
+def _src(*, enabled: bool = True, disabled_until=None):
+    from sweepreader.config import SourceConfig
+    return SourceConfig(id="cat_nms", modality="rss", parse="rss_generic",
+                        default_tier_hint="B", weight=0.9,
+                        enabled=enabled, disabled_until=disabled_until)
+
+
+def test_disabled_until_skips_before_the_date():
+    from datetime import date, datetime, timezone
+    s = _src(disabled_until=date(2026, 9, 4))
+    assert s.is_active(datetime(2026, 8, 30, tzinfo=timezone.utc)) is False
+
+
+def test_disabled_until_resumes_on_the_date():
+    from datetime import date, datetime, timezone
+    s = _src(disabled_until=date(2026, 9, 4))
+    assert s.is_active(datetime(2026, 9, 4, tzinfo=timezone.utc)) is True
+    assert s.is_active(datetime(2026, 9, 10, tzinfo=timezone.utc)) is True
+
+
+def test_disabled_until_does_not_override_enabled_false():
+    from datetime import date, datetime, timezone
+    s = _src(enabled=False, disabled_until=date(2026, 1, 1))
+    assert s.is_active(datetime(2026, 9, 10, tzinfo=timezone.utc)) is False
+
+
+def test_source_without_disabled_until_is_active():
+    assert _src().is_active() is True
+
+
+def test_config_yaml_parses_disabled_until():
+    """The real config carries the CAT NMS outage window."""
+    from datetime import date
+
+    from sweepreader.config import load_config
+    cfg = load_config("config.yaml")
+    cat = next(s for s in cfg.sources if s.id == "cat_nms")
+    assert isinstance(cat.disabled_until, date)
+
+
+def test_disabled_until_is_not_part_of_config_hash():
+    """Pausing a source must not invalidate stored classifications."""
+    from datetime import date
+
+    from sweepreader.config import load_config
+    cfg = load_config("config.yaml")
+    before = cfg.config_hash()
+    cat = next(s for s in cfg.sources if s.id == "cat_nms")
+    cat.disabled_until = date(2027, 1, 1)
+    assert cfg.config_hash() == before

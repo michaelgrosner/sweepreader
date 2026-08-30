@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -34,6 +34,18 @@ class SourceConfig:
     enabled: bool = True
     endpoint: str = ""
     address: str = ""
+    # Skip this source until the given date, then resume automatically. For an
+    # upstream outage that is expected to end: `enabled: false` is easy to set and
+    # then forget, and leaves the source silently dropped forever.
+    disabled_until: date | None = None
+
+    def is_active(self, now: datetime | None = None) -> bool:
+        if not self.enabled:
+            return False
+        if self.disabled_until is None:
+            return True
+        today = (now or datetime.now(timezone.utc)).date()
+        return today >= self.disabled_until
 
 
 @dataclass
@@ -97,6 +109,7 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
                 enabled=bool(s.get("enabled", True)),
                 endpoint=s.get("endpoint", ""),
                 address=s.get("address", ""),
+                disabled_until=_parse_date(s.get("disabled_until")),
             )
         )
 
@@ -113,6 +126,17 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         grouping_enabled=bool(raw.get("grouping", {}).get("enabled", True)),
         grouping_llm=bool(raw.get("grouping", {}).get("llm", True)),
     )
+
+
+def _parse_date(value: object) -> date | None:
+    """YAML gives a date for an unquoted 2026-09-04; accept a string too."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return date.fromisoformat(str(value))
 
 
 def _validate(raw: dict, path: str | Path) -> None:

@@ -121,6 +121,10 @@ sources:
     weight: 0.9
     parse: rss_generic
     enabled: true
+    # catnmsplan.com serves "Temporarily Unavailable" and the feed 503s (since
+    # 2026-08-27). Site owners say they are working on it, so skip the source
+    # and pick it back up automatically on this date — no manual re-enable.
+    disabled_until: 2026-09-04
 
   - id: finra_regulatory
     modality: rss
