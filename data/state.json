@@ -1,6 +1,6 @@
 {
   "config_hash": "3587b21cf38c5bce",
-  "failures_this_run": 2,
+  "failures_this_run": 1,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
@@ -43,8 +43,8 @@
       "disabled_until": "2026-09-04"
     },
     "finra_regulatory": {
-      "status": "error",
-      "error": "Client error '403 Forbidden' for url 'https://www.finra.org/rules-guidance/notices/rss'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+      "status": "ok",
+      "item_count": 0
     },
     "sec_press": {
       "status": "ok",
