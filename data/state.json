@@ -32,7 +32,7 @@
     },
     "nasdaqtrader_data_tech": {
       "status": "ok",
-      "item_count": 1
+      "item_count": 0
     },
     "nasdaqtrader_halt": {
       "status": "ok",
@@ -43,12 +43,12 @@
       "disabled_until": "2026-09-04"
     },
     "finra_regulatory": {
-      "status": "ok",
-      "item_count": 0
+      "status": "error",
+      "error": "Client error '403 Forbidden' for url 'https://www.finra.org/rules-guidance/notices/rss'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
     },
     "sec_press": {
       "status": "ok",
-      "item_count": 7
+      "item_count": 8
     },
     "memx_notices": {
       "status": "ok",
@@ -67,8 +67,8 @@
       "item_count": 8
     },
     "nyse_trader_updates": {
-      "status": "error",
-      "error": "Client error '403 Forbidden' for url 'https://www.nyse.com/api/notifications/public/system/1/summaries/filter?pageSize=50&pageNumber=0&sortKey=publishedDate&sortOrder=desc'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+      "status": "ok",
+      "item_count": 32
     },
     "box_notices": {
       "status": "warning",
