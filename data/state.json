@@ -3,8 +3,8 @@
   "failures_this_run": 3,
   "source_health": {
     "fed_register_sro": {
-      "status": "ok",
-      "item_count": 65
+      "status": "error",
+      "error": "Client error '403 Forbidden' for url 'https://www.federalregister.gov/api/v1/documents.json?conditions%5Bagencies%5D%5B%5D=securities-and-exchange-commission&conditions%5Bterm%5D=self-regulatory&conditions%5Bpublication_date%5D%5Bgte%5D=2026-08-21&per_page=40&order=newest&page=1&fields%5B%5D=document_number&fields%5B%5D=title&fields%5B%5D=html_url&fields%5B%5D=publication_date&fields%5B%5D=abstract&fields%5B%5D=full_text_xml_url&fields%5B%5D=agencies&fields%5B%5D=docket_ids'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
     },
     "cboe_options_tech": {
       "status": "ok",
@@ -60,15 +60,15 @@
     },
     "miax_equities": {
       "status": "ok",
-      "item_count": 7
+      "item_count": 8
     },
     "miax_futures": {
       "status": "ok",
       "item_count": 8
     },
     "nyse_trader_updates": {
-      "status": "error",
-      "error": "Client error '403 Forbidden' for url 'https://www.nyse.com/api/notifications/public/system/1/summaries/filter?pageSize=50&pageNumber=0&sortKey=publishedDate&sortOrder=desc'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+      "status": "ok",
+      "item_count": 32
     },
     "box_notices": {
       "status": "warning",
