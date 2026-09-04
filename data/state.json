@@ -1,10 +1,10 @@
 {
   "config_hash": "3587b21cf38c5bce",
-  "failures_this_run": 2,
+  "failures_this_run": 3,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
-      "item_count": 59
+      "item_count": 65
     },
     "cboe_options_tech": {
       "status": "ok",
@@ -60,15 +60,15 @@
     },
     "miax_equities": {
       "status": "ok",
-      "item_count": 6
+      "item_count": 7
     },
     "miax_futures": {
       "status": "ok",
       "item_count": 8
     },
     "nyse_trader_updates": {
-      "status": "ok",
-      "item_count": 32
+      "status": "error",
+      "error": "Client error '403 Forbidden' for url 'https://www.nyse.com/api/notifications/public/system/1/summaries/filter?pageSize=50&pageNumber=0&sortKey=publishedDate&sortOrder=desc'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
     },
     "box_notices": {
       "status": "warning",
