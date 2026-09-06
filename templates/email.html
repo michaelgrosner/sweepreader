@@ -39,15 +39,18 @@
       <tr><td class="surface" style="background:#FFFFFF;border:1px solid #E2E6EE;border-top:none;border-bottom:none;padding:0 24px;">
         <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#9CA3AF;padding:16px 0 10px;border-bottom:1px solid #E2E6EE;">Upcoming deadlines · next 14 days</div>
         {% for d in deadline_items %}
+        {% set d_color = '#EF4444' if d.urgency == 'urgent' else ('#F59E0B' if d.urgency == 'warning' else '#6B7280') %}
         <table width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;border-bottom:1px solid #F1F3F7;">
           <tr>
             <td width="70" valign="top" style="padding-right:12px;padding-bottom:10px;">
-              <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:11px;font-weight:600;color:{% if d.urgency == 'urgent' %}#EF4444{% elif d.urgency == 'warning' %}#F59E0B{% else %}#6B7280{% endif %};{% if d.is_past %}text-decoration:line-through;{% endif %}">
+              {% if d.is_past %}<s>{% endif %}
+              <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:11px;font-weight:600;color:{{ d_color }};">
                 {{ d.remaining_str }}
               </div>
-              <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#9CA3AF;{% if d.is_past %}text-decoration:line-through;{% endif %}">
+              <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#9CA3AF;">
                 {{ d.deadline_date.isoformat() }}
               </div>
+              {% if d.is_past %}</s>{% endif %}
             </td>
             <td valign="top" style="padding-bottom:10px;">
               <div style="margin-bottom:3px;">
