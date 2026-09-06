@@ -970,7 +970,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
   const nowISO = "{{ now.strftime('%Y-%m-%dT%H:%M:%SZ') }}";
   const input = document.getElementById('scrubber-input');
   const nowBtn = document.getElementById('scrubber-now');
-  const trailingMs = {{ trailing_days }} * 86400 * 1000;
+  const trailingMs = Number("{{ trailing_days }}") * 86400 * 1000;
 
   input.value = "{{ now.strftime('%Y-%m-%dT%H:%M') }}";
 
