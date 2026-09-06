@@ -46,7 +46,7 @@ The organizing fact: **every SRO rule filing — including all new venues — is
 | **Nasdaqtrader News Alerts** | Custom RSS builder `nasdaqtrader.com/trader.aspx?id=newsrss` — select *Options Technical Alerts*, *Options Regulatory Alerts*, *Equity Technical Updates*, *Data Technical News*, *Financial Products News* (down-weight Trader). Plus Trade Halt RSS (`id=TradeHaltRSS`) and System Status RSS (`id=SystemStatusRSS`). The builder emits the actual feed URL from the selected categories. | PHLX, ISE, GEMX, MRX, BX Options, NOM + Nasdaq/BX/PSX equities |
 | **Cboe technical RSS** | Per market: `cboe.com/us/options/support/technical/rss`, `cboe.com/us/equities/support/technical/rss`, `cboe.com/us/futures/support/technical/rss` (confirmed live `application/rss+xml`). | Cboe options (C1/C2/BZX/EDGX) + equities (BZX/BYX/EDGA/EDGX) tech specs |
 | **OCC (Options Clearing Corp)** | RSS feeds listed at `theocc.com/specialpages/legal/occ-rss-feeds` — OCC Alerts, Bulletins, News Releases, PSAs. (Information Memos are also web-searchable at `infomemo.theocc.com`.) | Clearing alerts/bulletins/memos |
-| **CAT NMS** | `https://www.catnmsplan.com/rss/topics.xml` | CAT reporting changes |
+| **CAT NMS** | `https://www.catnmsplan.com/rss/topics.xml` (topics) and `https://www.catnmsplan.com/rss/faq.xml` (FAQ revisions); both listed at `catnmsplan.com/subscribe` | CAT reporting changes |
 | **MEMX** | Notices on `info.memxtrading.com` (category pages, e.g. `/category/alerts-notices/`). Site is WordPress-class, so an RSS feed is likely at the `…/feed/` path — **verify**. | MEMX options + equities |
 
 ### Tier 2 — email / scrape (no usable feed found)

@@ -32,6 +32,7 @@ _VENUE_FROM_SOURCE: dict[str, str] = {
     "nasdaqtrader_halt": "NASDAQ",
     "occ_alerts": "OCC",
     "cat_nms": "CAT",
+    "cat_nms_faq": "CAT",
     "finra_regulatory": "FINRA",
     "sec_press": "SEC",
     "memx_notices": "MEMX",

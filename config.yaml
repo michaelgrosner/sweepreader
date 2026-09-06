@@ -121,10 +121,21 @@ sources:
     weight: 0.9
     parse: rss_generic
     enabled: true
-    # catnmsplan.com serves "Temporarily Unavailable" and the feed 503s (since
-    # 2026-08-27). Site owners say they are working on it, so skip the source
-    # and pick it back up automatically on this date — no manual re-enable.
-    disabled_until: 2026-09-04
+    # topics.xml still 503s as of 2026-09-06 — the outage is specific to this
+    # feed, not the site (see cat_nms_faq below, which serves fine). Extended a
+    # week; picks back up automatically on this date — no manual re-enable.
+    disabled_until: 2026-09-13
+
+  - id: cat_nms_faq
+    modality: rss
+    endpoint: "https://www.catnmsplan.com/rss/faq.xml"
+    default_tier_hint: B
+    weight: 0.85
+    parse: rss_generic
+    enabled: true
+    # CAT reporting FAQ revisions. Whole-history feed (~514 entries back to
+    # 2017), but the lookback window in the adapter keeps ingest to the handful
+    # republished each month.
 
   - id: finra_regulatory
     modality: rss
