@@ -131,6 +131,70 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .theme-btn:hover { border-color: var(--accent); }
 .theme-btn:focus-visible { outline: 2px solid var(--accent); }
 
+/* Search */
+.search-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 24px;
+}
+.search-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.search-icon { color: var(--text3); font-size: 1rem; flex-shrink: 0; }
+#search-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  padding: 5px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  outline: none;
+}
+#search-input::placeholder { color: var(--text3); }
+#search-input:focus { border-color: var(--accent); }
+.search-count {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--text3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.search-clear {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text3);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.search-clear:hover { border-color: var(--accent); color: var(--accent); }
+.search-hint {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+@media (max-width: 640px) { .search-hint { display: none; } }
+.no-results {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text3);
+  font-size: 0.85rem;
+}
+
 /* Time-travel scrubber */
 .scrubber-bar {
   background: var(--surface);
@@ -555,6 +619,17 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
   </div>
 </header>
 
+<div class="search-bar">
+  <div class="search-inner">
+    <span class="search-icon" aria-hidden="true">⌕</span>
+    <input type="search" id="search-input" autocomplete="off" spellcheck="false"
+           placeholder="Search titles, summaries, venues, tags…" aria-label="Search items">
+    <span class="search-count" id="search-count" hidden></span>
+    <button class="search-clear" id="search-clear" hidden aria-label="Clear search">clear</button>
+    <span class="search-hint" aria-hidden="true">press /</span>
+  </div>
+</div>
+
 <div class="scrubber-bar">
   <div class="scrubber-inner">
     <span class="scrubber-label">AS OF</span>
@@ -585,7 +660,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
 <main class="main" id="main-content">
   {% macro render_card(card) %}
   {% set item = card.item %}{% set cls = card.cls %}{% set score = card.score %}
-  <article class="card{% if card.is_group %} card-grouped{% endif %}" data-first-seen="{{ card.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-item-id="{{ item.id }}" data-tags="{{ card.tags | join(' ') }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %}>
+  <article class="card{% if card.is_group %} card-grouped{% endif %}" data-first-seen="{{ card.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-item-id="{{ item.id }}" data-tags="{{ card.tags | join(' ') }}" data-search="{{ card.search_text }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %}>
     <div class="tier-rail">
       <div class="tier-letter" style="color: {{ cls.tier | tier_color }}">{{ cls.tier }}</div>
       <div class="tier-meter-track">
@@ -627,6 +702,8 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
   <div class="empty">No items in the trailing {{ trailing_days }}-day window.</div>
   {% endif %}
 
+  <div class="no-results" id="no-results" hidden>No items match the current filters.</div>
+
   {% if suppressed %}
   <details id="suppressed-details" style="margin-top: 28px;">
     <summary class="suppressed-toggle">
@@ -636,7 +713,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     <ul class="suppressed-list" id="suppressed-list">
       {% for card in suppressed %}
       {% set item = card.item %}
-      <li class="suppressed-item" data-first-seen="{{ card.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-tags="{{ card.tags | join(' ') }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %}>
+      <li class="suppressed-item" data-first-seen="{{ card.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-tags="{{ card.tags | join(' ') }}" data-search="{{ card.search_text }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %}>
         <span class="suppressed-venue">{{ item.venue }}</span>
         <span class="suppressed-title"><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a></span>
         {% if card.is_group %}<span class="suppressed-markets">{% for label, url in card.markets %}<a class="market-chip" href="{{ url }}" target="_blank" rel="noopener">{{ label }}</a>{% endfor %}</span>{% endif %}
@@ -696,6 +773,12 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
   let todayOnly = false;
   let weekOnly = false;
 
+  const searchInput = document.getElementById('search-input');
+  const searchCount = document.getElementById('search-count');
+  const searchClear = document.getElementById('search-clear');
+  const noResults = document.getElementById('no-results');
+  let searchTerms = [];               // all terms must match (AND)
+
   function toLocalDatetimeValue(isoStr) {
     if (!isoStr) return '';
     const d = new Date(isoStr);
@@ -708,6 +791,12 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     if (!timeCutoff) return true;
     const fs = new Date(el.dataset.firstSeen);
     return fs <= timeCutoff && (timeCutoff - fs) <= trailingMs;
+  }
+
+  function passesSearch(el) {
+    if (!searchTerms.length) return true;
+    const hay = el.dataset.search || '';
+    return searchTerms.every(function(t) { return hay.indexOf(t) !== -1; });
   }
 
   function passesTags(el) {
@@ -773,8 +862,11 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
   }
 
   function applyFilters() {
+    let shown = 0, total = 0;
     document.querySelectorAll('.card, .suppressed-item').forEach(function(el) {
-      el.style.display = (passesTime(el) && passesTags(el) && passesToday(el) && passesWeek(el)) ? '' : 'none';
+      const ok = passesTime(el) && passesTags(el) && passesToday(el) && passesWeek(el) && passesSearch(el);
+      el.style.display = ok ? '' : 'none';
+      if (el.classList.contains('card')) { total++; if (ok) shown++; }
     });
     // Hide a section header when none of its cards are visible.
     document.querySelectorAll('.section-header').forEach(function(h) {
@@ -786,11 +878,20 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
       h.style.display = any ? '' : 'none';
     });
     const suppressedDetails = document.getElementById('suppressed-details');
+    let anySuppressedVisible = false;
     if (suppressedDetails) {
-      const anySuppressedVisible = Array.from(suppressedDetails.querySelectorAll('.suppressed-item'))
+      anySuppressedVisible = Array.from(suppressedDetails.querySelectorAll('.suppressed-item'))
         .some(el => el.style.display !== 'none');
       suppressedDetails.style.display = anySuppressedVisible ? '' : 'none';
     }
+
+    if (searchCount) {
+      const filtering = searchTerms.length || todayOnly || weekOnly ||
+                        Object.values(selected).some(s => s.size);
+      searchCount.hidden = !filtering;
+      searchCount.textContent = shown + ' / ' + total;
+    }
+    if (noResults) noResults.hidden = (shown > 0 || anySuppressedVisible);
   }
 
   input.addEventListener('change', function() {
@@ -850,6 +951,39 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     updateClear();
     applyFilters();
   });
+
+  // Search
+  function setSearch(value) {
+    searchInput.value = value;
+    searchTerms = value.toLowerCase().split(/\s+/).filter(Boolean);
+    if (searchClear) searchClear.hidden = !searchTerms.length;
+  }
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      setSearch(searchInput.value);
+      applyFilters();
+    });
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { setSearch(''); applyFilters(); searchInput.blur(); }
+    });
+  }
+  if (searchClear) searchClear.addEventListener('click', function() {
+    setSearch('');
+    applyFilters();
+    searchInput.focus();
+  });
+
+  // "/" focuses search, the way every list-of-things app does it.
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    e.preventDefault();
+    searchInput.focus();
+    searchInput.select();
+  });
+
+  applyFilters();
 })();
 </script>
 </body>

@@ -245,3 +245,45 @@ def test_render_today_button_and_is_today_attribute(tmp_dirs, monkeypatch):
     assert 'id="scrubber-week"' in content
     assert 'data-is-today="true"' in content
     assert 'data-published-date="' in content
+
+
+# --- client-side search haystack -------------------------------------------
+
+def test_search_text_covers_title_summary_venue_source_and_tags():
+    from sweepreader.render.page import Card
+    from sweepreader.store.models import Classification, Item
+
+    item = Item(id="i1", source_id="miax_options", venue="MIAX", title="Port Certification Window",
+                url="https://example.test/1", published_at=FIXTURE_NOW,
+                first_seen_at=FIXTURE_NOW, raw_text="", modality="rss")
+    cls = Classification(item_id="i1", model="m", config_hash="h", classified_at=FIXTURE_NOW,
+                         relevance=80, tier="A", rationale="r", summary="FIX port cutover")
+    card = Card(item=item, cls=cls, score=80.0, tags=["protocol", "cert-window"],
+                summary="FIX port cutover")
+
+    hay = card.search_text
+    assert hay == hay.lower()
+    for term in ("port certification window", "fix port cutover", "miax", "miax_options",
+                 "protocol", "cert-window"):
+        assert term in hay
+
+
+def test_search_text_includes_member_venues_of_a_group():
+    """A grouped card shows one canonical notice but must be findable by any
+    market it was cross-posted to."""
+    from sweepreader.render.page import Card
+    from sweepreader.store.models import Classification, Item
+
+    def _item(iid, venue):
+        return Item(id=iid, source_id="s", venue=venue, title="t", url="u",
+                    published_at=FIXTURE_NOW, first_seen_at=FIXTURE_NOW,
+                    raw_text="", modality="rss")
+
+    cls = Classification(item_id="a", model="m", config_hash="h", classified_at=FIXTURE_NOW,
+                         relevance=70, tier="B", rationale="r", summary=None)
+    card = Card(item=_item("a", "CBOE"), cls=cls, score=70.0,
+                members=[_item("a", "CBOE"), _item("b", "EDGX")],
+                markets=[("BZX", "https://example.test/bzx")])
+
+    assert "edgx" in card.search_text
+    assert "bzx" in card.search_text

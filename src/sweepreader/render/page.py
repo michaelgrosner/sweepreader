@@ -39,6 +39,24 @@ class Card:
     def member_count(self) -> int:
         return len(self.members) or 1
 
+    @property
+    def search_text(self) -> str:
+        """Lowercased haystack for the client-side search box. Member venues are
+        included so a grouped card stays findable by any market it was posted
+        to, not just the canonical one shown on the card."""
+        parts = [self.item.title, self.summary or "", self.item.venue, self.item.source_id]
+        parts.extend(self.tags)
+        parts.extend(label for label, _ in self.markets)
+        parts.extend(m.venue for m in self.members)
+        seen: set[str] = set()
+        words: list[str] = []
+        for part in parts:
+            token = part.strip().lower()
+            if token and token not in seen:
+                seen.add(token)
+                words.append(token)
+        return " ".join(words)
+
 logger = logging.getLogger(__name__)
 
 _TEMPLATES_DIR = Path(__file__).parent.parent.parent.parent / "templates"
