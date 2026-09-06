@@ -1,5 +1,14 @@
 # Future Features
 
+## Deadline extraction — 📋 specced
+
+Structured `deadline_date` / `deadline_kind` on each classification, driving a
+pinned "upcoming deadlines" rail on the page and in the email digest. Full
+design, including why it does not invalidate stored classifications, is in
+[DEADLINES.md](DEADLINES.md). Not implemented.
+
+---
+
 ## Tags — ✅ done
 
 Structured, multi-select tag set per item, populated by the LLM and filterable in
