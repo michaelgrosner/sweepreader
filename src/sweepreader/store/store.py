@@ -267,6 +267,35 @@ class Store:
                     logger.warning("Corrupt item line in %s: %s", p, e)
         return results
 
+    def get_items(self, item_ids: set[str], *, since: datetime | None = None) -> dict[str, Item]:
+        if not item_ids:
+            return {}
+        found: dict[str, Item] = {}
+        remaining = set(item_ids)
+        now = datetime.now(timezone.utc)
+        if since is not None:
+            shards = _get_shards_in_range(self._items_dir, since, now)
+        else:
+            shards = sorted(self._items_dir.glob("*.jsonl"))
+        for p in reversed(shards):
+            for line in p.read_text().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    d = json.loads(line)
+                    iid = d.get("id")
+                    if iid in remaining:
+                        item = Item.from_dict(d)
+                        found[item.id] = item
+                        remaining.remove(iid)
+                        if not remaining:
+                            return found
+                except Exception as e:
+                    logger.warning("Corrupt item line in %s: %s", p, e)
+        return found
+
+
 
 class StateStore:
     def __init__(self, data_dir: str | Path = "data"):

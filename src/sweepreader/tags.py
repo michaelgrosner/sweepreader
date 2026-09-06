@@ -5,6 +5,13 @@ closed set; anything outside it is dropped so the UI filter set stays bounded.
 """
 from __future__ import annotations
 
+from sweepreader.deadlines import (
+    DEADLINE_KINDS as DEADLINE_KINDS,
+)
+from sweepreader.deadlines import (
+    sanitize_deadline_kind as sanitize_deadline_kind,
+)
+
 # Ordered so the filter bar groups tags by axis predictably.
 TAG_AXES: dict[str, list[str]] = {
     "Subject": [
@@ -32,3 +39,4 @@ def sanitize_tags(raw: object) -> list[str]:
         if key in ALLOWED_TAGS and key not in out:
             out.append(key)
     return out
+

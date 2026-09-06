@@ -6,11 +6,12 @@ import os
 import re
 import time
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
 
+from sweepreader.deadlines import sanitize_deadline_kind
 from sweepreader.store.models import Classification
 from sweepreader.tags import TAG_AXES, sanitize_tags
 
@@ -30,6 +31,8 @@ _CLASSIFY_SCHEMA = {
         "tier": {"type": "string", "enum": ["A", "B", "C", "D", "E"]},
         "venues": {"type": "array", "items": {"type": "string"}},
         "tags": {"type": "array", "items": {"type": "string"}},
+        "deadline_date": {"type": ["string", "null"]},
+        "deadline_kind": {"type": ["string", "null"]},
         "rationale": {"type": "string"},
         "summary": {"type": ["string", "null"]},
     },
@@ -63,12 +66,18 @@ Tier definitions:
 Tag axes (pick ONLY applicable tags from these exact values; omit any that don't apply):
 {_tag_guidance()}
 
+Deadline fields:
+- deadline_date: if the text states a date the reader must act before — certification window open/close, cutover, mandatory upgrade-by, comment-period close, or retirement of a feed/port/protocol — return it as YYYY-MM-DD. Otherwise return null. Do not infer, extrapolate, or convert a relative phrase ("in 30 days") into a date; return null unless an explicit calendar date is present in the text. The item's own publication date is never a deadline.
+- deadline_kind: if deadline_date is present, one of: cert-window-opens, cert-window-closes, cutover, upgrade-by, comment-closes, retirement. Otherwise return null.
+
 Respond ONLY with valid JSON matching this schema:
 {{
   "relevance": <integer 0-100>,
   "tier": <"A"|"B"|"C"|"D"|"E">,
   "venues": [<exchange codes affected>],
   "tags": [<zero or more tags from the axes above, exact values only>],
+  "deadline_date": <"YYYY-MM-DD" or null>,
+  "deadline_kind": <"cert-window-opens"|"cert-window-closes"|"cutover"|"upgrade-by"|"comment-closes"|"retirement" or null>,
   "rationale": <1-2 sentence rationale>,
   "summary": <2-3 sentence summary for the reader, or null if relevance < {suppress_threshold}>
 }}
@@ -95,7 +104,7 @@ def _has_cjk(s: str) -> bool:
     return any("\u4e00" <= c <= "\u9fff" or "\u3040" <= c <= "\u30ff" for c in s)
 
 
-def _validate_response(data: dict) -> bool:
+def _validate_response(data: dict, item: "Item | None" = None) -> bool:
     # The model occasionally answers in Chinese despite the instruction (~2% of
     # calls observed). Treat it as an invalid response so the retry loop runs
     # rather than storing an unreadable summary.
@@ -111,6 +120,36 @@ def _validate_response(data: dict) -> bool:
         return False
     if not isinstance(data.get("venues"), list):
         return False
+
+    # Deadline validation
+    data["deadline_kind"] = sanitize_deadline_kind(data.get("deadline_kind"))
+
+    raw_date = data.get("deadline_date")
+    parsed_date: date | None = None
+    if isinstance(raw_date, date) and not isinstance(raw_date, datetime):
+        parsed_date = raw_date
+    elif isinstance(raw_date, datetime):
+        parsed_date = raw_date.date()
+    elif isinstance(raw_date, str):
+        try:
+            parsed_date = date.fromisoformat(raw_date.strip())
+        except (ValueError, TypeError):
+            parsed_date = None
+
+    if parsed_date is not None and item is not None and item.published_at is not None:
+        pub = item.published_at.date() if isinstance(item.published_at, datetime) else item.published_at
+        try:
+            min_date = pub.replace(year=pub.year - 2)
+        except ValueError:
+            min_date = pub.replace(year=pub.year - 2, day=28)
+        try:
+            max_date = pub.replace(year=pub.year + 5)
+        except ValueError:
+            max_date = pub.replace(year=pub.year + 5, day=28)
+        if parsed_date < min_date or parsed_date > max_date:
+            parsed_date = None
+
+    data["deadline_date"] = parsed_date
     return True
 
 
@@ -231,7 +270,7 @@ class OpenRouterClient(LlmClient):
                     logger.warning("LLM returned null content on attempt %d for item %s", attempt + 1, item.id)
                     continue
                 data = _extract_json(content)
-                if data and _validate_response(data):
+                if data and _validate_response(data, item):
                     return Classification(
                         item_id=item.id,
                         model=config.model,
@@ -244,6 +283,8 @@ class OpenRouterClient(LlmClient):
                         venues=data.get("venues", [item.venue]),
                         tags=sanitize_tags(data.get("tags")),
                         unclassified=False,
+                        deadline_date=data.get("deadline_date"),
+                        deadline_kind=data.get("deadline_kind"),
                     )
                 logger.warning("LLM returned invalid JSON on attempt %d for item %s: %.120r",
                                attempt + 1, item.id, content)

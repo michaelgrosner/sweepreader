@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 
@@ -67,6 +67,8 @@ class Classification:
     venues: list[str] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
     unclassified: bool = False
+    deadline_date: Optional[date] = None
+    deadline_kind: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -81,10 +83,20 @@ class Classification:
             "venues": self.venues,
             "tags": self.tags,
             "unclassified": self.unclassified,
+            "deadline_date": self.deadline_date.isoformat() if self.deadline_date else None,
+            "deadline_kind": self.deadline_kind,
         }
 
     @staticmethod
     def from_dict(d: dict) -> "Classification":
+        raw_deadline_date = d.get("deadline_date")
+        if isinstance(raw_deadline_date, str):
+            deadline_date = date.fromisoformat(raw_deadline_date)
+        elif isinstance(raw_deadline_date, date):
+            deadline_date = raw_deadline_date
+        else:
+            deadline_date = None
+
         return Classification(
             item_id=d["item_id"],
             model=d["model"],
@@ -97,6 +109,8 @@ class Classification:
             venues=d.get("venues", []),
             tags=d.get("tags", []),
             unclassified=d.get("unclassified", False),
+            deadline_date=deadline_date,
+            deadline_kind=d.get("deadline_kind"),
         )
 
 
