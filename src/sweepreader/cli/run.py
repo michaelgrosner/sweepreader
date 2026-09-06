@@ -10,7 +10,7 @@ from sweepreader.config import load_config
 from sweepreader.grouping import build_groups
 from sweepreader.ingest.base import fetch_source
 from sweepreader.ingest.cluster import assign_clusters
-from sweepreader.render import render_page
+from sweepreader.render import render_health, render_page
 from sweepreader.store import StateStore, Store
 
 logger = logging.getLogger(__name__)
@@ -108,6 +108,7 @@ def cmd_run(args) -> int:
 
     if args.render_only:
         render_page(config, store, state)
+        render_health(config, state)
         return 0
 
     config_hash = config.config_hash()
@@ -123,6 +124,17 @@ def cmd_run(args) -> int:
     now_for_sources = datetime.now(timezone.utc)
     per_source_health: dict = state.get("source_health", {})
 
+    def _health(source_id: str, entry: dict) -> dict:
+        """Stamp the check time and carry the previous success forward. Without
+        `last_ok` a long-running outage looks identical to a fresh one on the
+        health page, which is exactly when you need to tell them apart."""
+        prev = per_source_health.get(source_id) or {}
+        entry["checked_at"] = now_for_sources.isoformat()
+        entry["last_ok"] = (
+            now_for_sources.isoformat() if entry.get("status") == "ok" else prev.get("last_ok")
+        )
+        return entry
+
     all_new_items = []
     for source in config.sources:
         if not source.enabled:
@@ -131,23 +143,23 @@ def cmd_run(args) -> int:
             # A timed-out source is not a failure. Overwrite any stale "error"
             # health left from before it was disabled, or the alarm would keep
             # flagging a source we are deliberately not fetching.
-            per_source_health[source.id] = {
+            per_source_health[source.id] = _health(source.id, {
                 "status": "disabled",
                 "disabled_until": source.disabled_until.isoformat() if source.disabled_until else None,
-            }
+            })
             logger.info("source=%s skipped until %s", source.id, source.disabled_until)
             continue
         items, warning, err = fetch_source(source, state)
         if err:
             failures += 1
-            per_source_health[source.id] = {"status": "error", "error": str(err)}
+            per_source_health[source.id] = _health(source.id, {"status": "error", "error": str(err)})
             continue
         if warning:
             failures += 1
-            per_source_health[source.id] = {"status": "warning", "warning": warning}
+            per_source_health[source.id] = _health(source.id, {"status": "warning", "warning": warning})
             logger.warning("source=%s fetch warning: %s", source.id, warning)
         else:
-            per_source_health[source.id] = {"status": "ok", "item_count": len(items)}
+            per_source_health[source.id] = _health(source.id, {"status": "ok", "item_count": len(items)})
         all_new_items.extend(items)
         logger.info("source=%s fetched %d items", source.id, len(items))
 
@@ -206,6 +218,7 @@ def cmd_run(args) -> int:
     if not args.dry_run:
         state.save()
         render_page(config, store, state)
+        render_health(config, state)
 
     if failures > 0:
         logger.warning("%d source(s) failed this run", failures)

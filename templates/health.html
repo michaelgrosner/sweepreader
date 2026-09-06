@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SweepReader · source health</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%234F46E5'/><path d='M16 16 L16 4 A12 12 0 0 1 27.6 22z' fill='white' opacity='0.9'/><circle cx='16' cy='16' r='3' fill='white'/></svg>">
+<script>(function(){var r=document.documentElement;try{var s=localStorage.getItem('sr-theme');if(s)r.setAttribute('data-theme',s);else if(window.matchMedia('(prefers-color-scheme: dark)').matches)r.setAttribute('data-theme','dark');else r.setAttribute('data-theme','light');}catch(e){r.setAttribute('data-theme','light');}})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F8F9FB; --surface: #FFFFFF; --surface2: #F1F3F7; --border: #E2E6EE;
+  --text: #111827; --text2: #4B5563; --text3: #9CA3AF;
+  --accent: #4F46E5; --accent-dim: #EEF2FF;
+  --ok: #10B981; --warn: #F59E0B; --err: #EF4444;
+  --mono: 'IBM Plex Mono', monospace; --sans: 'Inter', sans-serif; --display: 'Space Grotesk', sans-serif;
+  --radius: 8px;
+}
+[data-theme="dark"] {
+  --bg: #0F1117; --surface: #1A1D27; --surface2: #222535; --border: #2D3148;
+  --text: #F0F2F8; --text2: #A0A8C0; --text3: #5A6080;
+  --accent: #8B83FF; --accent-dim: #1E1C3A;
+  --ok: #2DD4BF; --warn: #FBBF24; --err: #F87171;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 15px; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; min-height: 100vh; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.header { position: sticky; top: 0; z-index: 100; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; }
+.header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 16px; height: 52px; }
+.wordmark { font-family: var(--display); font-weight: 700; font-size: 1.1rem; letter-spacing: -0.02em; flex-shrink: 0; }
+.wordmark span { color: var(--accent); }
+.crumb { font-family: var(--mono); font-size: 0.7rem; color: var(--text3); flex: 1; }
+.theme-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: var(--text2); }
+.theme-btn:hover { border-color: var(--accent); }
+
+.main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.stat { font-family: var(--mono); font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); }
+.stat.error { border-color: var(--err); color: var(--err); }
+.stat.warning { border-color: var(--warn); color: var(--warn); }
+.stat.ok { border-color: var(--ok); color: var(--ok); }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 780px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 500; white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+td { font-size: 0.8rem; color: var(--text2); }
+td.src { font-family: var(--mono); font-size: 0.75rem; color: var(--text); white-space: nowrap; }
+td.num { font-family: var(--mono); font-size: 0.75rem; text-align: right; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.st { font-family: var(--mono); font-size: 0.7rem; white-space: nowrap; }
+.st-ok { color: var(--ok); } .st-ok .dot { background: var(--ok); }
+.st-warning { color: var(--warn); } .st-warning .dot { background: var(--warn); }
+.st-error { color: var(--err); } .st-error .dot { background: var(--err); }
+.st-disabled, .st-off, .st-unknown { color: var(--text3); }
+.st-disabled .dot, .st-off .dot, .st-unknown .dot { background: var(--text3); }
+.detail { font-size: 0.72rem; color: var(--text3); max-width: 320px; overflow-wrap: anywhere; }
+.stale { color: var(--err); font-weight: 600; }
+.endpoint { font-family: var(--mono); font-size: 0.66rem; color: var(--text3); max-width: 280px; overflow-wrap: anywhere; }
+.footer { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 14px; font-family: var(--mono); font-size: 0.66rem; color: var(--text3); }
+.note { margin: 0 0 18px; font-size: 0.78rem; color: var(--text3); max-width: 720px; }
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-inner">
+    <div class="wordmark">Sweep<span>Reader</span></div>
+    <div class="crumb">source health</div>
+    <div class="header-controls">
+      <a class="stat" href="index.html">← back to feed</a>
+      <button class="theme-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark/light">◐</button>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <p class="note">
+    Per-source fetch state from the most recent pipeline run. <strong>Last OK</strong> is
+    the last run in which the source returned without error — a source can be
+    <em>ok</em> today and still have been silently empty for weeks, so read it
+    alongside the item count.
+  </p>
+
+  <div class="summary">
+    <span class="stat">{{ total }} source{{ '' if total == 1 else 's' }}</span>
+    {% for status in ["error", "warning", "disabled", "unknown", "ok", "off"] %}
+    {% if counts.get(status) %}
+    <span class="stat {{ status }}">{{ counts[status] }} {{ status }}</span>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Source</th><th>Status</th><th class="num">Items</th>
+          <th>Last OK</th><th>Checked</th><th>Detail</th><th>Endpoint</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="src">{{ row.source_id }}<br><span class="endpoint">{{ row.modality }} · {{ row.parse }} · tier {{ row.tier_hint }}</span></td>
+          <td><span class="st st-{{ row.status }}"><span class="dot"></span>{{ row.status }}</span></td>
+          <td class="num">{{ row.item_count if row.item_count is not none else "—" }}</td>
+          <td class="num">
+            {% if row.last_ok %}
+              <span{% if row.stale_days is not none and row.stale_days >= 3 %} class="stale"{% endif %}>{{ row.last_ok.strftime("%Y-%m-%d") }}</span>
+              {% if row.stale_days %}<br><span class="endpoint">{{ row.stale_days }}d ago</span>{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="num">{{ row.checked_at.strftime("%Y-%m-%d %H:%M") if row.checked_at else "—" }}</td>
+          <td class="detail">{{ row.detail }}</td>
+          <td class="endpoint">{{ row.endpoint }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="footer">
+    <span>Rendered: {{ now.strftime("%Y-%m-%d %H:%M UTC") }}</span>
+    <span>Model: {{ model }}</span>
+  </footer>
+</main>
+
+<script>
+document.getElementById('theme-toggle').addEventListener('click', function() {
+  var r = document.documentElement;
+  var t = r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  r.setAttribute('data-theme', t);
+  try { localStorage.setItem('sr-theme', t); } catch(e) {}
+});
+</script>
+</body>
+</html>

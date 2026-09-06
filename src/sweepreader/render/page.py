@@ -188,6 +188,118 @@ def _collapse(
     return cards, sup_cards
 
 
+def _env() -> Environment:
+    env = Environment(
+        loader=FileSystemLoader(str(_TEMPLATES_DIR)),
+        autoescape=select_autoescape(["html"]),
+    )
+    env.filters["tier_color"] = lambda t: _TIER_COLORS.get(t, "#9CA3AF")
+    env.filters["score_pct"] = lambda s: min(100, int(s))
+    return env
+
+
+@dataclass
+class HealthRow:
+    """One source on the health page. `status` is the run-time state from
+    `state.json`; `off` means the source is switched off in config and so was
+    never fetched at all."""
+    source_id: str
+    status: str
+    modality: str
+    parse: str
+    endpoint: str
+    tier_hint: str
+    weight: float
+    detail: str = ""
+    item_count: int | None = None
+    checked_at: datetime | None = None
+    last_ok: datetime | None = None
+    stale_days: int | None = None
+
+
+# Worst first: the page exists to surface what is broken, so an operator should
+# never have to scroll to find it.
+_STATUS_ORDER = {"error": 0, "warning": 1, "disabled": 2, "unknown": 3, "ok": 4, "off": 5}
+
+
+def _parse_iso(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
+
+def build_health_rows(
+    config: "AppConfig",
+    state: "StateStore",
+    now: datetime,
+) -> list[HealthRow]:
+    health = state.get("source_health", {}) or {}
+    rows: list[HealthRow] = []
+
+    for source in config.sources:
+        entry = health.get(source.id) or {}
+        if not source.enabled:
+            status = "off"
+        else:
+            status = str(entry.get("status") or "unknown")
+
+        detail = str(
+            entry.get("error") or entry.get("warning") or entry.get("disabled_until") or ""
+        )
+        if status == "off":
+            detail = "disabled in config.yaml"
+        elif status == "disabled" and source.disabled_until:
+            detail = f"paused until {source.disabled_until.isoformat()}"
+
+        last_ok = _parse_iso(entry.get("last_ok"))
+        item_count = entry.get("item_count")
+        rows.append(HealthRow(
+            source_id=source.id,
+            status=status,
+            modality=source.modality,
+            parse=source.parse,
+            endpoint=source.endpoint or source.address,
+            tier_hint=source.default_tier_hint,
+            weight=source.weight,
+            detail=detail,
+            item_count=item_count if isinstance(item_count, int) else None,
+            checked_at=_parse_iso(entry.get("checked_at")),
+            last_ok=last_ok,
+            stale_days=(now - last_ok).days if last_ok else None,
+        ))
+
+    rows.sort(key=lambda r: (_STATUS_ORDER.get(r.status, 9), r.source_id))
+    return rows
+
+
+def render_health(
+    config: "AppConfig",
+    state: "StateStore",
+    now: datetime | None = None,
+) -> None:
+    now = now or datetime.now(timezone.utc)
+    rows = build_health_rows(config, state, now)
+
+    counts: dict[str, int] = {}
+    for row in rows:
+        counts[row.status] = counts.get(row.status, 0) + 1
+
+    html = _env().get_template("health.html").render(
+        now=now,
+        rows=rows,
+        counts=counts,
+        total=len(rows),
+        model=config.model,
+    )
+    _DOCS_DIR.mkdir(exist_ok=True)
+    (_DOCS_DIR / "health.html").write_text(html)
+    logger.info("Health page rendered: %d source(s)", len(rows))
+
+
 def render_page(
     config: "AppConfig",
     store: "Store",
@@ -231,12 +343,7 @@ def render_page(
     enabled_sources = [s for s in config.sources if s.is_active(now)]
     coverage_codes = sorted({s.id.replace("_tech", "").replace("_reg", "").upper()[:8] for s in enabled_sources})
 
-    env = Environment(
-        loader=FileSystemLoader(str(_TEMPLATES_DIR)),
-        autoescape=select_autoescape(["html"]),
-    )
-    env.filters["tier_color"] = lambda t: _TIER_COLORS.get(t, "#9CA3AF")
-    env.filters["score_pct"] = lambda s: min(100, int(s))
+    env = _env()
     env.filters["is_today"] = lambda dt: _is_today(dt, now)
 
     template = env.get_template("page.html")
