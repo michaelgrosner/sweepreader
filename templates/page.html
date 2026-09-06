@@ -143,29 +143,17 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .card.card-target { animation: sr-target-flash 1.6s ease-out 1; }
 @media (prefers-reduced-motion: reduce) { .card.card-target { animation: none; } }
 
-/* Search */
-.search-bar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 8px 24px;
-}
-.search-inner {
-  max-width: 900px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.search-icon { color: var(--text3); font-size: 1rem; flex-shrink: 0; }
+/* Search — shares the scrubber row; filtering chrome should not cost a band */
+.search-icon { color: var(--text3); font-size: 0.95rem; flex-shrink: 0; margin-left: 4px; }
 #search-input {
   flex: 1;
-  min-width: 0;
+  min-width: 90px;
   font-family: var(--sans);
-  font-size: 0.82rem;
-  padding: 5px 10px;
+  font-size: 0.78rem;
+  padding: 3px 8px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 4px;
   color: var(--text);
   outline: none;
 }
@@ -190,16 +178,6 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   flex-shrink: 0;
 }
 .search-clear:hover { border-color: var(--accent); color: var(--accent); }
-.search-hint {
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  color: var(--text3);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 6px;
-  flex-shrink: 0;
-}
-@media (max-width: 640px) { .search-hint { display: none; } }
 .no-results {
   text-align: center;
   padding: 40px 20px;
@@ -218,7 +196,8 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px 8px;
+  flex-wrap: wrap;
 }
 .scrubber-label {
   font-family: var(--mono);
@@ -227,8 +206,8 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
   flex-shrink: 0;
 }
 #scrubber-input {
-  flex: 1;
-  max-width: 280px;
+  flex: 0 0 auto;
+  width: 190px;
   font-family: var(--mono);
   font-size: 0.75rem;
   padding: 4px 8px;
@@ -655,17 +634,6 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
   </div>
 </header>
 
-<div class="search-bar">
-  <div class="search-inner">
-    <span class="search-icon" aria-hidden="true">⌕</span>
-    <input type="search" id="search-input" autocomplete="off" spellcheck="false"
-           placeholder="Search titles, summaries, venues, tags…" aria-label="Search items">
-    <span class="search-count" id="search-count" hidden></span>
-    <button class="search-clear" id="search-clear" hidden aria-label="Clear search">clear</button>
-    <span class="search-hint" aria-hidden="true">press /</span>
-  </div>
-</div>
-
 <div class="scrubber-bar">
   <div class="scrubber-inner">
     <span class="scrubber-label">AS OF</span>
@@ -674,6 +642,11 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
     <button class="scrubber-today-btn" id="scrubber-today">TODAY</button>
     <button class="scrubber-today-btn" id="scrubber-week">WEEK</button>
     <button class="scrubber-new-btn" id="scrubber-new" hidden>NEW</button>
+    <span class="search-icon" aria-hidden="true">⌕</span>
+    <input type="search" id="search-input" autocomplete="off" spellcheck="false"
+           placeholder="Search titles, venues, tags…   /" aria-label="Search items">
+    <span class="search-count" id="search-count" hidden></span>
+    <button class="search-clear" id="search-clear" hidden aria-label="Clear search">clear</button>
   </div>
 </div>
 
