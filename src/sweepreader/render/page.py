@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from sweepreader.deadlines import DeadlineRow, build_deadline_row, select_deadlines
 from sweepreader.grouping import market_links
 from sweepreader.score import rank_items
 from sweepreader.tags import TAG_AXES
@@ -30,6 +31,7 @@ class Card:
     tags: list[str] = field(default_factory=list)
     summary: str | None = None
     first_seen_at: datetime | None = None
+    deadline: DeadlineRow | None = None
 
     @property
     def is_group(self) -> bool:
@@ -46,6 +48,10 @@ class Card:
         to, not just the canonical one shown on the card."""
         parts = [self.item.title, self.summary or "", self.item.venue, self.item.source_id]
         parts.extend(self.tags)
+        if self.deadline:
+            if self.deadline.deadline_kind:
+                parts.append(self.deadline.deadline_kind)
+            parts.append(self.deadline.deadline_date.isoformat())
         parts.extend(label for label, _ in self.markets)
         parts.extend(m.venue for m in self.members)
         seen: set[str] = set()
@@ -96,6 +102,7 @@ def _collapse(
     groups: dict[str, "Group"],
     items: list["Item"],
     classifications: dict[str, "Classification"],
+    today: date | None = None,
 ) -> tuple[list["Card"], list["Card"]]:
     """Fold grouped items into one card each, preserving rank order.
 
@@ -122,9 +129,11 @@ def _collapse(
     for item, cls, score in visible:          # already sorted desc by score
         group = member_to_group.get(item.id)
         if group is None:
+            deadline = build_deadline_row(item, cls, today) if today else None
             cards.append(Card(item=item, cls=cls, score=score,
                               tags=list(cls.tags), summary=cls.summary,
-                              first_seen_at=item.first_seen_at))
+                              first_seen_at=item.first_seen_at,
+                              deadline=deadline))
             continue
         if group.group_id in seen_groups:
             continue                          # absorbed into the card already emitted
@@ -132,9 +141,11 @@ def _collapse(
 
         members = _consistent_members(group, member_to_group, by_id)
         if len(members) < 2:
+            deadline = build_deadline_row(item, cls, today) if today else None
             cards.append(Card(item=item, cls=cls, score=score,
                               tags=list(cls.tags), summary=cls.summary,
-                              first_seen_at=item.first_seen_at))
+                              first_seen_at=item.first_seen_at,
+                              deadline=deadline))
             continue
 
         # Prefer the canonical member as the face of the card, but only if it is
@@ -154,6 +165,14 @@ def _collapse(
                     if tag not in tags:
                         tags.append(tag)
 
+        deadline = build_deadline_row(display_item, display_cls, today) if today else None
+        if deadline is None and today:
+            for m in members:
+                mc = classifications.get(m.id)
+                if mc and mc.deadline_date:
+                    deadline = build_deadline_row(m, mc, today)
+                    break
+
         cards.append(Card(
             item=display_item,
             cls=display_cls,
@@ -163,6 +182,7 @@ def _collapse(
             tags=tags,
             summary=group.summary or display_cls.summary,
             first_seen_at=min(m.first_seen_at for m in members),
+            deadline=deadline,
         ))
 
     # Suppressed members of a surfaced group are already represented by its card.
@@ -177,18 +197,22 @@ def _collapse(
     for item, cls in remaining:
         group = member_to_group.get(item.id)
         if group is None:
+            deadline = build_deadline_row(item, cls, today) if today else None
             sup_cards.append(Card(item=item, cls=cls, score=0.0,
                                   tags=list(cls.tags), summary=cls.summary,
-                                  first_seen_at=item.first_seen_at))
+                                  first_seen_at=item.first_seen_at,
+                                  deadline=deadline))
             continue
         if group.group_id in seen_sup:
             continue
         seen_sup.add(group.group_id)
         members = _consistent_members(group, member_to_group, by_id)
         if len(members) < 2:
+            deadline = build_deadline_row(item, cls, today) if today else None
             sup_cards.append(Card(item=item, cls=cls, score=0.0,
                                   tags=list(cls.tags), summary=cls.summary,
-                                  first_seen_at=item.first_seen_at))
+                                  first_seen_at=item.first_seen_at,
+                                  deadline=deadline))
             continue
         sup_tags: list[str] = []
         for m in members:
@@ -197,11 +221,19 @@ def _collapse(
                 for tag in mc.tags:
                     if tag not in sup_tags:
                         sup_tags.append(tag)
+        deadline = build_deadline_row(item, cls, today) if today else None
+        if deadline is None and today:
+            for m in members:
+                mc = classifications.get(m.id)
+                if mc and mc.deadline_date:
+                    deadline = build_deadline_row(m, mc, today)
+                    break
         sup_cards.append(Card(
             item=item, cls=cls, score=0.0, members=members,
             markets=market_links(members), tags=sup_tags,
             summary=group.summary or cls.summary,
             first_seen_at=min(m.first_seen_at for m in members),
+            deadline=deadline,
         ))
     return cards, sup_cards
 
@@ -325,10 +357,30 @@ def render_page(
     now: datetime | None = None,
 ) -> None:
     now = now or datetime.now(timezone.utc)
+    today = now.date()
     cutoff = now - timedelta(days=config.trailing_days)
 
     items = store.items_as_of(now, config.trailing_days)
     classifications = store.classifications_as_of(now, config_hash=config.config_hash(), since=cutoff)
+
+    # Deadlines: query store beyond trailing_days for dated items, capped at max_age_days
+    max_age_cutoff = now - timedelta(days=config.max_age_days)
+    extended_cls = store.classifications_as_of(now, config_hash=config.config_hash(), since=max_age_cutoff)
+    rail_start = today - timedelta(days=1)
+    rail_end = today + timedelta(days=45)
+
+    dated_cls = {
+        iid: c for iid, c in extended_cls.items()
+        if c.deadline_date is not None and rail_start <= c.deadline_date <= rail_end
+    }
+
+    # Pull in any items outside trailing_days that have active deadlines
+    missing_ids = set(dated_cls.keys()) - {i.id for i in items}
+    if missing_ids:
+        extra_items = store.get_items(missing_ids, since=max_age_cutoff)
+        for item in extra_items.values():
+            items.append(item)
+            classifications[item.id] = dated_cls[item.id]
 
     from sweepreader.tags import ALLOWED_TAGS
     for cls in classifications.values():
@@ -337,10 +389,18 @@ def render_page(
     visible, suppressed = rank_items(items, classifications, config, now)
 
     groups = store.groups_as_of(now, since=cutoff) if config.grouping_enabled else {}
-    cards, suppressed_cards = _collapse(visible, suppressed, groups, items, classifications)
+    cards, suppressed_cards = _collapse(visible, suppressed, groups, items, classifications, today=today)
 
     new_today = [c for c in cards if _is_today(c.item.published_at, now)]
     earlier = [c for c in cards if not _is_today(c.item.published_at, now)]
+
+    # Build deadline rail
+    item_map = {i.id: i for i in items}
+    deadline_pairs = [
+        (item_map[iid], c) for iid, c in dated_cls.items()
+        if iid in item_map
+    ]
+    deadlines = select_deadlines(deadline_pairs, today=today, max_days=45)
 
     # Tags actually present across rendered items, grouped by axis (so the filter
     # bar only offers tags that exist in the current view).
@@ -370,6 +430,7 @@ def render_page(
         new_today=new_today,
         earlier=earlier,
         suppressed=suppressed_cards,
+        deadlines=deadlines,
         coverage_codes=coverage_codes,
         source_health=source_health,
         failures=failures,
@@ -382,5 +443,5 @@ def render_page(
 
     _DOCS_DIR.mkdir(exist_ok=True)
     (_DOCS_DIR / "index.html").write_text(html)
-    logger.info("Page rendered: %d card(s) from %d visible item(s), %d suppressed row(s)",
-                len(cards), len(visible), len(suppressed_cards))
+    logger.info("Page rendered: %d card(s) from %d visible item(s), %d deadline(s), %d suppressed row(s)",
+                len(cards), len(visible), len(deadlines), len(suppressed_cards))

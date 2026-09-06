@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from sweepreader.deadlines import select_deadlines
 from sweepreader.render.page import _collapse
 from sweepreader.score import rank_items
 
@@ -36,16 +37,19 @@ def render_email(
     store: "Store",
     state: "StateStore",
     dry_run: bool = False,
+    now: datetime | None = None,
 ) -> str:
+    now = now or datetime.now(timezone.utc)
+    today = now.date()
+
     last_sent_raw = state.get("last_email_sent_at")
     if last_sent_raw:
         last_sent = datetime.fromisoformat(last_sent_raw)
         if last_sent.tzinfo is None:
             last_sent = last_sent.replace(tzinfo=timezone.utc)
     else:
-        last_sent = datetime.now(timezone.utc) - timedelta(days=1)
+        last_sent = now - timedelta(days=1)
 
-    now = datetime.now(timezone.utc)
     items = store.items_as_of(now, config.trailing_days)
     classifications = store.classifications_as_of(now, config_hash=config.config_hash(),
                                                   since=now - timedelta(days=config.trailing_days))
@@ -59,10 +63,32 @@ def render_email(
     # Collapse cross-posts to one line, same as the page (GROUPING.md §3.4).
     groups = store.groups_as_of(now, since=now - timedelta(days=config.trailing_days)) \
         if config.grouping_enabled else {}
-    cards, suppressed_cards = _collapse(visible, suppressed, groups, delta_items, delta_cls)
+    cards, suppressed_cards = _collapse(visible, suppressed, groups, delta_items, delta_cls, today=today)
 
     top_items = [c for c in cards if c.cls.tier in ("A", "B")]
     also_items = [c for c in cards if c.cls.tier not in ("A", "B")]
+
+    # Deadlines for email rail: <= 14d, looking back up to max_age_days
+    max_age_cutoff = now - timedelta(days=config.max_age_days)
+    extended_cls = store.classifications_as_of(now, config_hash=config.config_hash(), since=max_age_cutoff)
+    rail_start = today - timedelta(days=1)
+    rail_end = today + timedelta(days=14)
+    dated_cls = {
+        iid: c for iid, c in extended_cls.items()
+        if c.deadline_date is not None and rail_start <= c.deadline_date <= rail_end
+    }
+    missing_ids = set(dated_cls.keys()) - {i.id for i in items}
+    email_all_items = list(items)
+    if missing_ids:
+        extra_items = store.get_items(missing_ids, since=max_age_cutoff)
+        email_all_items.extend(extra_items.values())
+
+    item_map = {i.id: i for i in email_all_items}
+    deadline_pairs = [
+        (item_map[iid], c) for iid, c in dated_cls.items()
+        if iid in item_map
+    ]
+    deadline_items = select_deadlines(deadline_pairs, today=today, max_days=14)
 
     env = Environment(
         loader=FileSystemLoader(str(_TEMPLATES_DIR)),
@@ -75,6 +101,7 @@ def render_email(
         now=now,
         top_items=top_items,
         also_items=also_items,
+        deadline_items=deadline_items,
         suppressed_count=len(suppressed_cards),
         last_sent=last_sent,
         tier_colors=_TIER_COLORS,

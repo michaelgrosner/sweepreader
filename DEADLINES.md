@@ -1,8 +1,8 @@
 # Deadline extraction — spec
 
-Status: **proposed, not implemented.** Written out rather than built because it
-spans the classifier schema, the store, the ranker and two templates; the other
-page features shipped alongside it are self-contained by comparison.
+Status: **implemented.** Spans the classifier schema, the store,
+the renderer and two templates (page and email).
+
 
 ## Why
 

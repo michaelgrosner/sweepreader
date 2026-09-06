@@ -34,6 +34,36 @@
         </tr></table>
       </td></tr>
 
+      {% if deadline_items %}
+      <!-- Upcoming deadlines -->
+      <tr><td class="surface" style="background:#FFFFFF;border:1px solid #E2E6EE;border-top:none;border-bottom:none;padding:0 24px;">
+        <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#9CA3AF;padding:16px 0 10px;border-bottom:1px solid #E2E6EE;">Upcoming deadlines · next 14 days</div>
+        {% for d in deadline_items %}
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;border-bottom:1px solid #F1F3F7;">
+          <tr>
+            <td width="70" valign="top" style="padding-right:12px;padding-bottom:10px;">
+              <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:11px;font-weight:600;color:{% if d.urgency == 'urgent' %}#EF4444{% elif d.urgency == 'warning' %}#F59E0B{% else %}#6B7280{% endif %};{% if d.is_past %}text-decoration:line-through;{% endif %}">
+                {{ d.remaining_str }}
+              </div>
+              <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#9CA3AF;{% if d.is_past %}text-decoration:line-through;{% endif %}">
+                {{ d.deadline_date.isoformat() }}
+              </div>
+            </td>
+            <td valign="top" style="padding-bottom:10px;">
+              <div style="margin-bottom:3px;">
+                <span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;font-weight:500;letter-spacing:0.06em;padding:1px 5px;border-radius:3px;background:#EEF2FF;color:#4F46E5;text-transform:uppercase;">{{ d.item.venue }}</span>
+                {% if d.deadline_kind %}<span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#6B7280;margin-left:4px;">{{ d.deadline_kind }}</span>{% endif %}
+              </div>
+              <div style="font-weight:600;font-size:13px;line-height:1.4;">
+                <a href="{{ d.item.url }}" style="color:#111827;text-decoration:none;">{{ d.item.title }}</a>
+              </div>
+            </td>
+          </tr>
+        </table>
+        {% endfor %}
+      </td></tr>
+      {% endif %}
+
       {% if top_items %}
       <!-- Top items -->
       <tr><td class="surface" style="background:#FFFFFF;border:1px solid #E2E6EE;border-top:none;border-bottom:none;padding:0 24px;">
