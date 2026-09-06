@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SweepReader · source health</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%234F46E5'/><path d='M16 16 L16 4 A12 12 0 0 1 27.6 22z' fill='white' opacity='0.9'/><circle cx='16' cy='16' r='3' fill='white'/></svg>">
+<script>(function(){var r=document.documentElement;try{var s=localStorage.getItem('sr-theme');if(s)r.setAttribute('data-theme',s);else if(window.matchMedia('(prefers-color-scheme: dark)').matches)r.setAttribute('data-theme','dark');else r.setAttribute('data-theme','light');}catch(e){r.setAttribute('data-theme','light');}})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F8F9FB; --surface: #FFFFFF; --surface2: #F1F3F7; --border: #E2E6EE;
+  --text: #111827; --text2: #4B5563; --text3: #9CA3AF;
+  --accent: #4F46E5; --accent-dim: #EEF2FF;
+  --ok: #10B981; --warn: #F59E0B; --err: #EF4444;
+  --mono: 'IBM Plex Mono', monospace; --sans: 'Inter', sans-serif; --display: 'Space Grotesk', sans-serif;
+  --radius: 8px;
+}
+[data-theme="dark"] {
+  --bg: #0F1117; --surface: #1A1D27; --surface2: #222535; --border: #2D3148;
+  --text: #F0F2F8; --text2: #A0A8C0; --text3: #5A6080;
+  --accent: #8B83FF; --accent-dim: #1E1C3A;
+  --ok: #2DD4BF; --warn: #FBBF24; --err: #F87171;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 15px; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; min-height: 100vh; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.header { position: sticky; top: 0; z-index: 100; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; }
+.header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 16px; height: 52px; }
+.wordmark { font-family: var(--display); font-weight: 700; font-size: 1.1rem; letter-spacing: -0.02em; flex-shrink: 0; }
+.wordmark span { color: var(--accent); }
+.crumb { font-family: var(--mono); font-size: 0.7rem; color: var(--text3); flex: 1; }
+.theme-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: var(--text2); }
+.theme-btn:hover { border-color: var(--accent); }
+
+.main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.stat { font-family: var(--mono); font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); }
+.stat.error { border-color: var(--err); color: var(--err); }
+.stat.warning { border-color: var(--warn); color: var(--warn); }
+.stat.ok { border-color: var(--ok); color: var(--ok); }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 780px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 500; white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+td { font-size: 0.8rem; color: var(--text2); }
+td.src { font-family: var(--mono); font-size: 0.75rem; color: var(--text); white-space: nowrap; }
+td.num { font-family: var(--mono); font-size: 0.75rem; text-align: right; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.st { font-family: var(--mono); font-size: 0.7rem; white-space: nowrap; }
+.st-ok { color: var(--ok); } .st-ok .dot { background: var(--ok); }
+.st-warning { color: var(--warn); } .st-warning .dot { background: var(--warn); }
+.st-error { color: var(--err); } .st-error .dot { background: var(--err); }
+.st-disabled, .st-off, .st-unknown { color: var(--text3); }
+.st-disabled .dot, .st-off .dot, .st-unknown .dot { background: var(--text3); }
+.detail { font-size: 0.72rem; color: var(--text3); max-width: 320px; overflow-wrap: anywhere; }
+.stale { color: var(--err); font-weight: 600; }
+.endpoint { font-family: var(--mono); font-size: 0.66rem; color: var(--text3); max-width: 280px; overflow-wrap: anywhere; }
+.footer { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 14px; font-family: var(--mono); font-size: 0.66rem; color: var(--text3); }
+.note { margin: 0 0 18px; font-size: 0.78rem; color: var(--text3); max-width: 720px; }
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-inner">
+    <div class="wordmark">Sweep<span>Reader</span></div>
+    <div class="crumb">source health</div>
+    <div class="header-controls">
+      <a class="stat" href="index.html">← back to feed</a>
+      <button class="theme-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark/light">◐</button>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <p class="note">
+    Per-source fetch state from the most recent pipeline run. <strong>Last OK</strong> is
+    the last run in which the source returned without error — a source can be
+    <em>ok</em> today and still have been silently empty for weeks, so read it
+    alongside the item count.
+  </p>
+
+  <div class="summary">
+    <span class="stat">27 sources</span>
+    
+    
+    <span class="stat error">1 error</span>
+    
+    
+    
+    <span class="stat warning">1 warning</span>
+    
+    
+    
+    
+    
+    <span class="stat unknown">1 unknown</span>
+    
+    
+    
+    <span class="stat ok">18 ok</span>
+    
+    
+    
+    <span class="stat off">6 off</span>
+    
+    
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Source</th><th>Status</th><th class="num">Items</th>
+          <th>Last OK</th><th>Checked</th><th>Detail</th><th>Endpoint</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td class="src">cat_nms<br><span class="endpoint">rss · rss_generic · tier B</span></td>
+          <td><span class="st st-error"><span class="dot"></span>error</span></td>
+          <td class="num">—</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail">Server error &#39;503 Service Unavailable&#39; for url &#39;https://www.catnmsplan.com/rss/topics.xml&#39;
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503</td>
+          <td class="endpoint">https://www.catnmsplan.com/rss/topics.xml</td>
+        </tr>
+        
+        <tr>
+          <td class="src">box_notices<br><span class="endpoint">scrape · box_notices · tier A</span></td>
+          <td><span class="st st-warning"><span class="dot"></span>warning</span></td>
+          <td class="num">—</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail">Both listing and fallback feed failed. Listing: Cloudflare block or listing parse error: Client error &#39;403 Forbidden&#39; for url &#39;https://boxexchange.com/notices&#39;
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Feed: Client error &#39;403 Forbidden&#39; for url &#39;https://boxexchange.com/?post_type=circulars&amp;feed=rss2&#39;
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403</td>
+          <td class="endpoint">https://boxexchange.com/notices</td>
+        </tr>
+        
+        <tr>
+          <td class="src">cat_nms_faq<br><span class="endpoint">rss · rss_generic · tier B</span></td>
+          <td><span class="st st-unknown"><span class="dot"></span>unknown</span></td>
+          <td class="num">—</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.catnmsplan.com/rss/faq.xml</td>
+        </tr>
+        
+        <tr>
+          <td class="src">cboe_equities_tech<br><span class="endpoint">rss · rss_generic · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">2</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.cboe.com/us/equities/support/technical/rss</td>
+        </tr>
+        
+        <tr>
+          <td class="src">cboe_futures_tech<br><span class="endpoint">rss · rss_generic · tier B</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">2</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.cboe.com/us/futures/support/technical/rss</td>
+        </tr>
+        
+        <tr>
+          <td class="src">cboe_options_tech<br><span class="endpoint">rss · rss_generic · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">2</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.cboe.com/us/options/support/technical/rss</td>
+        </tr>
+        
+        <tr>
+          <td class="src">fed_register_sro<br><span class="endpoint">api · federal_register · tier D</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">72</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.federalregister.gov/api/v1/documents.json?conditions%5Bagencies%5D%5B%5D=securities-and-exchange-commission&amp;conditions%5Bterm%5D=self-regulatory&amp;per_page=40&amp;order=newest</td>
+        </tr>
+        
+        <tr>
+          <td class="src">finra_regulatory<br><span class="endpoint">rss · rss_generic · tier B</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">0</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.finra.org/rules-guidance/notices/rss</td>
+        </tr>
+        
+        <tr>
+          <td class="src">iex_alerts<br><span class="endpoint">api · iex_alerts · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">4</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://api.notifications.iex.io/api/v1/public/trading-alerts</td>
+        </tr>
+        
+        <tr>
+          <td class="src">memx_notices<br><span class="endpoint">rss · rss_generic · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">0</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://info.memxtrading.com/category/alerts-notices/feed/</td>
+        </tr>
+        
+        <tr>
+          <td class="src">miax_equities<br><span class="endpoint">scrape · miax_alerts · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">8</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.miaxglobal.com/markets/us-equities/pearl-equities/alerts</td>
+        </tr>
+        
+        <tr>
+          <td class="src">miax_futures<br><span class="endpoint">scrape · miax_alerts · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">8</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.miaxglobal.com/markets/futures/miax-futures/alerts</td>
+        </tr>
+        
+        <tr>
+          <td class="src">miax_options<br><span class="endpoint">scrape · miax_alerts · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">8</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.miaxglobal.com/markets/us-options/all-options-exchange/alerts</td>
+        </tr>
+        
+        <tr>
+          <td class="src">nasdaqtrader_data_tech<br><span class="endpoint">rss · rss_generic · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">0</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.nasdaqtrader.com/rss.aspx?feed=currentheadlines&amp;categorylist=48</td>
+        </tr>
+        
+        <tr>
+          <td class="src">nasdaqtrader_equity_tech<br><span class="endpoint">rss · rss_generic · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">0</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.nasdaqtrader.com/rss.aspx?feed=currentheadlines&amp;categorylist=7</td>
+        </tr>
+        
+        <tr>
+          <td class="src">nasdaqtrader_halt<br><span class="endpoint">rss · rss_generic · tier E</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">0</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.nasdaqtrader.com/rss.aspx?feed=tradehalts</td>
+        </tr>
+        
+        <tr>
+          <td class="src">nasdaqtrader_options_reg<br><span class="endpoint">rss · rss_generic · tier B</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">0</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.nasdaqtrader.com/rss.aspx?feed=currentheadlines&amp;categorylist=13</td>
+        </tr>
+        
+        <tr>
+          <td class="src">nasdaqtrader_options_tech<br><span class="endpoint">rss · rss_generic · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">0</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.nasdaqtrader.com/rss.aspx?feed=currentheadlines&amp;categorylist=12</td>
+        </tr>
+        
+        <tr>
+          <td class="src">nyse_trader_updates<br><span class="endpoint">api · nyse_notifications · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">32</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.nyse.com/api/notifications/public/system/1/summaries/filter</td>
+        </tr>
+        
+        <tr>
+          <td class="src">opra_notices<br><span class="endpoint">scrape · opra_notices · tier A</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">0</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.opraplan.com/</td>
+        </tr>
+        
+        <tr>
+          <td class="src">sec_press<br><span class="endpoint">rss · rss_generic · tier B</span></td>
+          <td><span class="st st-ok"><span class="dot"></span>ok</span></td>
+          <td class="num">8</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail"></td>
+          <td class="endpoint">https://www.sec.gov/news/pressreleases.rss</td>
+        </tr>
+        
+        <tr>
+          <td class="src">email_24x<br><span class="endpoint">email · email_html_or_pdf · tier B</span></td>
+          <td><span class="st st-off"><span class="dot"></span>off</span></td>
+          <td class="num">—</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail">disabled in config.yaml</td>
+          <td class="endpoint">you+24x@gmail.com</td>
+        </tr>
+        
+        <tr>
+          <td class="src">email_box<br><span class="endpoint">email · email_html_or_pdf · tier A</span></td>
+          <td><span class="st st-off"><span class="dot"></span>off</span></td>
+          <td class="num">—</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail">disabled in config.yaml</td>
+          <td class="endpoint">you+box@gmail.com</td>
+        </tr>
+        
+        <tr>
+          <td class="src">email_iex<br><span class="endpoint">email · email_html_or_pdf · tier A</span></td>
+          <td><span class="st st-off"><span class="dot"></span>off</span></td>
+          <td class="num">—</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail">disabled in config.yaml</td>
+          <td class="endpoint">you+iex@gmail.com</td>
+        </tr>
+        
+        <tr>
+          <td class="src">email_miax<br><span class="endpoint">email · email_html_or_pdf · tier A</span></td>
+          <td><span class="st st-off"><span class="dot"></span>off</span></td>
+          <td class="num">—</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail">disabled in config.yaml</td>
+          <td class="endpoint">you+miax@gmail.com</td>
+        </tr>
+        
+        <tr>
+          <td class="src">email_nyse<br><span class="endpoint">email · email_html_or_pdf · tier A</span></td>
+          <td><span class="st st-off"><span class="dot"></span>off</span></td>
+          <td class="num">—</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail">disabled in config.yaml</td>
+          <td class="endpoint">you+nyse@gmail.com</td>
+        </tr>
+        
+        <tr>
+          <td class="src">occ_alerts<br><span class="endpoint">rss · rss_generic · tier E</span></td>
+          <td><span class="st st-off"><span class="dot"></span>off</span></td>
+          <td class="num">—</td>
+          <td class="num">
+            —
+          </td>
+          <td class="num">—</td>
+          <td class="detail">disabled in config.yaml</td>
+          <td class="endpoint">https://infomemo.theocc.com/infomemo-rss</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="footer">
+    <span>Rendered: 2026-09-06 18:00 UTC</span>
+    <span>Model: ~deepseek/deepseek-v4-flash-latest</span>
+  </footer>
+</main>
+
+<script>
+document.getElementById('theme-toggle').addEventListener('click', function() {
+  var r = document.documentElement;
+  var t = r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  r.setAttribute('data-theme', t);
+  try { localStorage.setItem('sr-theme', t); } catch(e) {}
+});
+</script>
+</body>
+</html>
