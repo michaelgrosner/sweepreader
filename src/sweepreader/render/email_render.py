@@ -95,6 +95,11 @@ def render_email(
         autoescape=select_autoescape(["html"]),
     )
     env.filters["tier_color"] = lambda t: _TIER_COLORS.get(t, "#9CA3AF")
+    env.filters["tier_meter_fill"] = lambda cls: (
+        f'<div style="position:absolute;bottom:0;left:0;right:0;'
+        f'height:{cls.relevance}%;background:{_TIER_COLORS.get(cls.tier, "#9CA3AF")};'
+        f'opacity:0.75;border-radius:2px;"></div>'
+    )
 
     template = env.get_template("email.html")
     html = template.render(

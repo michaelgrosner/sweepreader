@@ -81,9 +81,19 @@
           <tr>
             <td width="36" valign="top" style="padding-right:12px;padding-bottom:12px;">
               <div style="text-align:center;">
-                <div style="font-family:'IBM Plex Mono',Courier,monospace;font-weight:500;font-size:13px;color:{{ cls.tier | tier_color }};">{{ cls.tier }}</div>
+                {% if cls.tier == 'A' %}
+                <div style="font-family:'IBM Plex Mono',Courier,monospace;font-weight:500;font-size:13px;color:#4F46E5;">A</div>
+                {% elif cls.tier == 'B' %}
+                <div style="font-family:'IBM Plex Mono',Courier,monospace;font-weight:500;font-size:13px;color:#3B82F6;">B</div>
+                {% elif cls.tier == 'C' %}
+                <div style="font-family:'IBM Plex Mono',Courier,monospace;font-weight:500;font-size:13px;color:#14B8A6;">C</div>
+                {% elif cls.tier == 'D' %}
+                <div style="font-family:'IBM Plex Mono',Courier,monospace;font-weight:500;font-size:13px;color:#F59E0B;">D</div>
+                {% else %}
+                <div style="font-family:'IBM Plex Mono',Courier,monospace;font-weight:500;font-size:13px;color:#9CA3AF;">{{ cls.tier }}</div>
+                {% endif %}
                 <div style="width:4px;height:40px;background:#E2E6EE;border-radius:2px;margin:4px auto;position:relative;overflow:hidden;">
-                  <div style="position:absolute;bottom:0;left:0;right:0;height:{{ cls.relevance }}%;background:{{ cls.tier | tier_color }};opacity:0.75;border-radius:2px;"></div>
+                  {{ cls | tier_meter_fill | safe }}
                 </div>
                 <div style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#9CA3AF;">{{ cls.relevance }}</div>
               </div>

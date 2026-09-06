@@ -245,6 +245,10 @@ def _env() -> Environment:
     )
     env.filters["tier_color"] = lambda t: _TIER_COLORS.get(t, "#9CA3AF")
     env.filters["score_pct"] = lambda s: min(100, int(s))
+    env.filters["tier_meter_fill"] = lambda score, tier: (
+        f'<div class="tier-meter-fill" style="height: {min(100, int(score))}%; '
+        f'background: {_TIER_COLORS.get(tier, "#9CA3AF")}; opacity: 0.75;"></div>'
+    )
     return env
 
 

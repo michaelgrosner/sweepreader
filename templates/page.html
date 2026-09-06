@@ -825,9 +825,19 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
   {% set item = card.item %}{% set cls = card.cls %}{% set score = card.score %}
   <article class="card{% if card.is_group %} card-grouped{% endif %}" id="item-{{ item.id }}" data-first-seen="{{ card.first_seen_at.isoformat() }}" data-published-date="{{ item.published_at.strftime('%Y-%m-%d') }}" data-item-id="{{ item.id }}" data-tags="{{ card.tags | join(' ') }}" data-search="{{ card.search_text }}" {% if item.published_at | is_today %}data-is-today="true"{% endif %} data-has-deadline="{% if card.deadline %}true{% else %}false{% endif %}" data-deadline="{% if card.deadline %}{{ card.deadline.deadline_date.isoformat() }}{% endif %}">
     <div class="tier-rail">
-      <div class="tier-letter" style="color: {{ cls.tier | tier_color }}">{{ cls.tier }}</div>
+      {% if cls.tier == 'A' %}
+      <div class="tier-letter" style="color: #4F46E5;">A</div>
+      {% elif cls.tier == 'B' %}
+      <div class="tier-letter" style="color: #3B82F6;">B</div>
+      {% elif cls.tier == 'C' %}
+      <div class="tier-letter" style="color: #14B8A6;">C</div>
+      {% elif cls.tier == 'D' %}
+      <div class="tier-letter" style="color: #F59E0B;">D</div>
+      {% else %}
+      <div class="tier-letter" style="color: #9CA3AF;">{{ cls.tier }}</div>
+      {% endif %}
       <div class="tier-meter-track">
-        <div class="tier-meter-fill" style="height: {{ score | score_pct }}%; background: {{ cls.tier | tier_color }}; opacity: 0.75;"></div>
+        {{ score | tier_meter_fill(cls.tier) | safe }}
       </div>
       <div class="tier-score">{{ cls.relevance }}</div>
     </div>
