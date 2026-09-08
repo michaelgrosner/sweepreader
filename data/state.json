@@ -5,128 +5,128 @@
     "fed_register_sro": {
       "status": "ok",
       "item_count": 63,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "cboe_options_tech": {
       "status": "ok",
-      "item_count": 2,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "item_count": 6,
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "cboe_equities_tech": {
       "status": "ok",
-      "item_count": 2,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "item_count": 6,
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "cboe_futures_tech": {
       "status": "ok",
       "item_count": 2,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "nasdaqtrader_options_tech": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "nasdaqtrader_options_reg": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "nasdaqtrader_equity_tech": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "nasdaqtrader_data_tech": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "nasdaqtrader_halt": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "cat_nms": {
       "status": "disabled",
       "disabled_until": "2026-09-13",
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
       "last_ok": null
     },
     "finra_regulatory": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "sec_press": {
       "status": "ok",
       "item_count": 8,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "memx_notices": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "miax_options": {
       "status": "ok",
       "item_count": 8,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "miax_equities": {
       "status": "ok",
       "item_count": 8,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "miax_futures": {
       "status": "ok",
       "item_count": 8,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "nyse_trader_updates": {
       "status": "ok",
       "item_count": 29,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "box_notices": {
       "status": "warning",
       "warning": "Both listing and fallback feed failed. Listing: Cloudflare block or listing parse error: Client error '403 Forbidden' for url 'https://boxexchange.com/notices'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Feed: Client error '403 Forbidden' for url 'https://boxexchange.com/?post_type=circulars&feed=rss2'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
       "last_ok": null
     },
     "iex_alerts": {
       "status": "ok",
       "item_count": 4,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "opra_notices": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     },
     "cat_nms_faq": {
       "status": "ok",
       "item_count": 2,
-      "checked_at": "2026-09-08T04:27:35.790106+00:00",
-      "last_ok": "2026-09-08T04:27:35.790106+00:00"
+      "checked_at": "2026-09-08T11:10:53.386967+00:00",
+      "last_ok": "2026-09-08T11:10:53.386967+00:00"
     }
   }
 }
