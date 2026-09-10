@@ -9,7 +9,7 @@ Scope is dates the reader must act before:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
@@ -45,6 +45,11 @@ class DeadlineRow:
     urgency: str       # "urgent" (<= 3d), "warning" (<= 14d), "neutral" (> 14d)
     is_past: bool      # days_remaining < 0 (1-day grace window)
     remaining_str: str # e.g. "3d", "0d", "-1d"
+    # Set when the row stands for a group of cross-posted notices rather than a
+    # single one, so the rail can collapse them the way the cards do
+    # (GROUPING.md §3.4). `item` is then the group's card face.
+    markets: list[tuple[str, str]] = field(default_factory=list)
+    member_count: int = 1
 
 
 def build_deadline_row(

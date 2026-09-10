@@ -69,6 +69,8 @@ Tag axes (pick ONLY applicable tags from these exact values; omit any that don't
 Deadline fields:
 - deadline_date: if the text states a date the reader must act before — certification window open/close, cutover, mandatory upgrade-by, comment-period close, or retirement of a feed/port/protocol — return it as YYYY-MM-DD. Otherwise return null. Do not infer, extrapolate, or convert a relative phrase ("in 30 days") into a date; return null unless an explicit calendar date is present in the text. The item's own publication date is never a deadline.
 - deadline_kind: if deadline_date is present, one of: cert-window-opens, cert-window-closes, cutover, upgrade-by, comment-closes, retirement. Otherwise return null.
+- A date the reader merely observes is not a deadline. Return null for the day a security starts or stops trading, IPO/listing/transfer/symbol-change effective dates, halts and resumptions, series list/delist, expirations, index rebalances, dividend and other corporate-action dates, meeting or holiday dates, and effective dates of fee schedules. Only a date the reader's own systems must be ready by counts.
+- The presence of a date does not raise an item's tier or relevance. Tier is judged on substance alone: a corporate action with a hard date is still tier E.
 
 Respond ONLY with valid JSON matching this schema:
 {{

@@ -238,6 +238,38 @@ def _collapse(
     return cards, sup_cards
 
 
+def build_deadline_rail(
+    cards: list["Card"],
+    today: date,
+    max_days: int,
+) -> list[DeadlineRow]:
+    """Rail rows for `cards` — one row per card, not one per notice.
+
+    Built from cards rather than raw item/classification pairs for two reasons:
+    a notice cross-posted to six markets collapses to a single row the way its
+    card does (GROUPING.md §3.4), and every row's `#item-<id>` anchor resolves,
+    since a grouped card is only rendered under its display member's id. Pass
+    the visible cards only — a deadline on an item the page suppresses should
+    not claim rail space above everything the reader does care about.
+    """
+    faces: dict[str, "Card"] = {}
+    pairs: list[tuple["Item", "Classification"]] = []
+    for card in cards:
+        if card.deadline is None:
+            continue
+        # The card's deadline may come from a member rather than its face, so
+        # pair the face item with whichever classification carries the date.
+        pairs.append((card.item, card.deadline.cls))
+        faces[card.item.id] = card
+
+    rows = select_deadlines(pairs, today=today, max_days=max_days)
+    for row in rows:
+        card = faces[row.item.id]
+        row.markets = card.markets
+        row.member_count = card.member_count
+    return rows
+
+
 def _env() -> Environment:
     env = Environment(
         loader=FileSystemLoader(str(_TEMPLATES_DIR)),
@@ -398,13 +430,7 @@ def render_page(
     new_today = [c for c in cards if _is_today(c.item.published_at, now)]
     earlier = [c for c in cards if not _is_today(c.item.published_at, now)]
 
-    # Build deadline rail
-    item_map = {i.id: i for i in items}
-    deadline_pairs = [
-        (item_map[iid], c) for iid, c in dated_cls.items()
-        if iid in item_map
-    ]
-    deadlines = select_deadlines(deadline_pairs, today=today, max_days=45)
+    deadlines = build_deadline_rail(cards, today=today, max_days=45)
 
     # Tags actually present across rendered items, grouped by axis (so the filter
     # bar only offers tags that exist in the current view).

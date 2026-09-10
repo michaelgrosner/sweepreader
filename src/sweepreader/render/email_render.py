@@ -11,8 +11,7 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from sweepreader.deadlines import select_deadlines
-from sweepreader.render.page import _collapse
+from sweepreader.render.page import _collapse, build_deadline_rail
 from sweepreader.score import rank_items
 
 if TYPE_CHECKING:
@@ -83,12 +82,15 @@ def render_email(
         extra_items = store.get_items(missing_ids, since=max_age_cutoff)
         email_all_items.extend(extra_items.values())
 
-    item_map = {i.id: i for i in email_all_items}
-    deadline_pairs = [
-        (item_map[iid], c) for iid, c in dated_cls.items()
-        if iid in item_map
-    ]
-    deadline_items = select_deadlines(deadline_pairs, today=today, max_days=14)
+    # The rail is ranked and collapsed over the whole window, not the delta: a
+    # deadline announced before the last digest is still upcoming today, and a
+    # notice cross-posted to six markets belongs on one line here too.
+    rail_cls = dict(classifications)
+    rail_cls.update(dated_cls)
+    rail_visible, rail_suppressed = rank_items(email_all_items, rail_cls, config, now)
+    rail_cards, _ = _collapse(rail_visible, rail_suppressed, groups, email_all_items,
+                              rail_cls, today=today)
+    deadline_items = build_deadline_rail(rail_cards, today=today, max_days=14)
 
     env = Environment(
         loader=FileSystemLoader(str(_TEMPLATES_DIR)),

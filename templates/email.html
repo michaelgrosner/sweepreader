@@ -60,6 +60,7 @@
             <td valign="top" style="padding-bottom:10px;">
               <div style="margin-bottom:3px;">
                 <span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;font-weight:500;letter-spacing:0.06em;padding:1px 5px;border-radius:3px;background:#EEF2FF;color:#4F46E5;text-transform:uppercase;">{{ d.item.venue }}</span>
+                {% if d.member_count > 1 %}<span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#6B7280;margin-left:4px;">· and {{ d.member_count - 1 }} more market{% if d.member_count > 2 %}s{% endif %}</span>{% endif %}
                 {% if d.deadline_kind %}<span style="font-family:'IBM Plex Mono',Courier,monospace;font-size:9px;color:#6B7280;margin-left:4px;">{{ d.deadline_kind }}</span>{% endif %}
               </div>
               <div style="font-weight:600;font-size:13px;line-height:1.4;">

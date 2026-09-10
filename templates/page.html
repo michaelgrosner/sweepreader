@@ -884,6 +884,7 @@ details[open] .suppressed-caret { transform: rotate(90deg); }
         </div>
         <div class="deadline-cell-meta">
           <span class="venue-tag">{{ d.item.venue }}</span>
+          {% if d.member_count > 1 %}<span class="group-badge" title="Published to: {% for label, url in d.markets %}{{ label }}{% if not loop.last %} · {% endif %}{% endfor %}">{{ d.member_count }} notices</span>{% endif %}
           {% if d.deadline_kind %}<span class="deadline-kind-tag">{{ d.deadline_kind }}</span>{% endif %}
         </div>
         <div class="deadline-cell-title">

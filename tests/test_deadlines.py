@@ -26,7 +26,7 @@ from sweepreader.deadlines import (
 from sweepreader.render.email_render import render_email
 from sweepreader.render.page import render_page
 from sweepreader.store import StateStore, Store
-from sweepreader.store.models import Classification, Item
+from sweepreader.store.models import Classification, Group, Item
 from tests.conftest import FIXTURE_NOW
 
 
@@ -229,6 +229,10 @@ def test_prompt_includes_do_not_infer_clause():
     assert "deadline_kind" in prompt
     assert "Do not infer, extrapolate, or convert a relative phrase" in prompt
     assert "The item's own publication date is never a deadline." in prompt
+    # A date the reader only observes (a listing going live, a halt) is not a
+    # deadline, and having one must not lift the item out of tier E.
+    assert "A date the reader merely observes is not a deadline." in prompt
+    assert "The presence of a date does not raise an item's tier or relevance." in prompt
 
 
 def test_urgency_buckets_and_grace_day():
@@ -424,3 +428,98 @@ def test_email_digest_rail_restricted_to_14_days(tmp_path):
     # Item 30 Days Out must NOT appear in the deadline block
     deadline_block = html.split("Upcoming deadlines · next 14 days")[1].split("New since last digest")[0]
     assert "Item 30 Days Out" not in deadline_block
+
+
+def test_rail_collapses_a_cross_posted_group_into_one_row(tmp_path, monkeypatch):
+    """One notice published to six markets is one card, so it is one rail row.
+
+    Before this, the rail was built per item: the group took six lines and five
+    of their `#item-<id>` anchors pointed at ids the page never rendered, since
+    a grouped card only exists under its display member's id.
+    """
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(page_mod, "_DOCS_DIR", docs_dir)
+
+    store = Store(tmp_path / "data")
+    state = StateStore(tmp_path / "data")
+    config = make_config()
+    today = FIXTURE_NOW.date()
+
+    venues = ["MIAX Pearl", "MIAX Emerald", "MIAX Options", "MIAX Sapphire"]
+    member_ids = []
+    for n, venue in enumerate(venues):
+        item = make_item(
+            f"miax_{n}",
+            published_at=FIXTURE_NOW,
+            title="MIAX Exchange Group - 45-day retention period for SFTP reports",
+            venue=venue,
+        )
+        store.append_item(item)
+        store.append_classification(Classification(
+            item_id=item.id, model=config.model, config_hash=config.config_hash(),
+            classified_at=FIXTURE_NOW, relevance=85, tier="A", rationale="r",
+            summary="Retention period change.",
+            deadline_date=today + timedelta(days=26), deadline_kind="cutover",
+        ))
+        member_ids.append(item.id)
+
+    store.append_group(Group(
+        group_id=Group.make_id(member_ids), member_ids=member_ids,
+        canonical_id=member_ids[0], decided_at=FIXTURE_NOW,
+    ))
+
+    render_page(config, store, state, now=FIXTURE_NOW)
+    html = (docs_dir / "index.html").read_text()
+    rail = html.split('id="deadline-rail"')[1].split("</section>")[0]
+
+    assert rail.count('class="deadline-row') == 1
+    assert "4 notices" in rail
+    # The row points at the card the page actually rendered.
+    assert f'href="#item-{member_ids[0]}"' in rail
+    for stale in member_ids[1:]:
+        assert f"#item-{stale}" not in rail
+
+
+def test_suppressed_item_with_a_date_stays_out_of_the_rail(tmp_path, monkeypatch):
+    """A tier E notice does not earn rail space by carrying a date.
+
+    Nasdaq listing notices ("... to Begin Listing and Trading on 09/16/2026")
+    are tier E, but the model occasionally reads the trading date as a cutover.
+    The rail is built from visible cards, so suppressed noise cannot surface.
+    """
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(page_mod, "_DOCS_DIR", docs_dir)
+
+    store = Store(tmp_path / "data")
+    state = StateStore(tmp_path / "data")
+    config = make_config()
+    today = FIXTURE_NOW.date()
+
+    noise = make_item("listing_noise", published_at=FIXTURE_NOW,
+                      title="DTN2026-19 - Trio-Tech to Begin Listing and Trading on Nasdaq",
+                      venue="NASDAQ")
+    store.append_item(noise)
+    store.append_classification(Classification(
+        item_id=noise.id, model=config.model, config_hash=config.config_hash(),
+        classified_at=FIXTURE_NOW, relevance=10, tier="E", rationale="Corporate action",
+        summary=None, deadline_date=today + timedelta(days=6), deadline_kind="cutover",
+    ))
+
+    real = make_item("real_cutover", published_at=FIXTURE_NOW, title="Real Cutover Notice")
+    store.append_item(real)
+    store.append_classification(Classification(
+        item_id=real.id, model=config.model, config_hash=config.config_hash(),
+        classified_at=FIXTURE_NOW, relevance=85, tier="A", rationale="Migration",
+        summary="s", deadline_date=today + timedelta(days=6), deadline_kind="cutover",
+    ))
+
+    render_page(config, store, state, now=FIXTURE_NOW)
+    html = (docs_dir / "index.html").read_text()
+    rail = html.split('id="deadline-rail"')[1].split("</section>")[0]
+
+    assert "Real Cutover Notice" in rail
+    assert "Trio-Tech" not in rail
+    # Still on the page, in the suppressed list.
+    assert "Trio-Tech" in html
