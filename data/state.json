@@ -1,132 +1,132 @@
 {
   "config_hash": "3587b21cf38c5bce",
-  "failures_this_run": 1,
+  "failures_this_run": 2,
   "source_health": {
     "fed_register_sro": {
       "status": "ok",
-      "item_count": 64,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "item_count": 59,
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "cboe_options_tech": {
       "status": "ok",
       "item_count": 13,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "cboe_equities_tech": {
       "status": "ok",
       "item_count": 13,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "cboe_futures_tech": {
       "status": "ok",
       "item_count": 13,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "nasdaqtrader_options_tech": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "nasdaqtrader_options_reg": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "nasdaqtrader_equity_tech": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "nasdaqtrader_data_tech": {
       "status": "ok",
       "item_count": 1,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "nasdaqtrader_halt": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "cat_nms": {
       "status": "disabled",
       "disabled_until": "2026-09-13",
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
       "last_ok": null
     },
     "finra_regulatory": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "sec_press": {
       "status": "ok",
       "item_count": 8,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "memx_notices": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "miax_options": {
       "status": "ok",
       "item_count": 8,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "miax_equities": {
       "status": "ok",
       "item_count": 8,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "miax_futures": {
       "status": "ok",
       "item_count": 8,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "nyse_trader_updates": {
-      "status": "ok",
-      "item_count": 31,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
+      "status": "error",
+      "error": "Client error '403 Forbidden' for url 'https://www.nyse.com/api/notifications/public/system/1/summaries/filter?pageSize=50&pageNumber=0&sortKey=publishedDate&sortOrder=desc'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
       "last_ok": "2026-09-10T23:06:39.466348+00:00"
     },
     "box_notices": {
       "status": "warning",
       "warning": "Both listing and fallback feed failed. Listing: Cloudflare block or listing parse error: Client error '403 Forbidden' for url 'https://boxexchange.com/notices'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403. Feed: Client error '403 Forbidden' for url 'https://boxexchange.com/?post_type=circulars&feed=rss2'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
       "last_ok": null
     },
     "iex_alerts": {
       "status": "ok",
       "item_count": 4,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "opra_notices": {
       "status": "ok",
       "item_count": 1,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     },
     "cat_nms_faq": {
       "status": "ok",
       "item_count": 0,
-      "checked_at": "2026-09-10T23:06:39.466348+00:00",
-      "last_ok": "2026-09-10T23:06:39.466348+00:00"
+      "checked_at": "2026-09-11T04:31:06.190628+00:00",
+      "last_ok": "2026-09-11T04:31:06.190628+00:00"
     }
   }
 }
