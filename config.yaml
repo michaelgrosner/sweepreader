@@ -121,10 +121,12 @@ sources:
     weight: 0.9
     parse: rss_generic
     enabled: true
-    # topics.xml still 503s as of 2026-09-06 — the outage is specific to this
-    # feed, not the site (see cat_nms_faq below, which serves fine). Extended a
-    # week; picks back up automatically on this date — no manual re-enable.
-    disabled_until: 2026-09-13
+    # topics.xml still 503s as of 2026-10-17 — the outage is specific to this
+    # feed, not the site (see cat_nms_faq below, which serves fine). While it is
+    # the only source in `error` state, every scheduled run trips the workflow's
+    # "Flag failures" step and mails a red build every 3 hours. Extended another
+    # two weeks; picks back up automatically on this date — no manual re-enable.
+    disabled_until: 2026-10-31
 
   - id: cat_nms_faq
     modality: rss
@@ -195,13 +197,21 @@ sources:
   # Document" link, then extract the PDF text (the real notice body). The listing
   # is behind a Cloudflare header gate (browser sec-ch-ua/Sec-Fetch headers pass
   # it); on a hard block the adapter falls back to the title-only RSS feed.
+  #
+  # Deactivated 2026-10-17: from a GitHub-hosted runner both the listing and the
+  # RSS fallback return 403 — Cloudflare blocks the CI egress IPs regardless of
+  # headers, so this source has produced nothing but warnings (last_ok
+  # 2026-09-25). It still works from a residential IP, so the adapter is kept
+  # intact for local runs; flip `enabled` back on if BOX is ever reachable from
+  # CI. Not `disabled_until`: there is no date on which this is expected to fix
+  # itself.
   - id: box_notices
     modality: scrape
     endpoint: "https://boxexchange.com/notices"
     default_tier_hint: A
     weight: 0.9
     parse: box_notices
-    enabled: true
+    enabled: false
 
   - id: email_miax
     modality: email
