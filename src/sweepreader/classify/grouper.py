@@ -19,7 +19,15 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from sweepreader.classify.classifier import _OPENROUTER_URL, _USER_AGENT, _extract_json
+from sweepreader.classify.classifier import (
+    _FATAL_STATUSES,
+    _OPENROUTER_URL,
+    _USER_AGENT,
+    _extract_json,
+    refusal_message,
+    request_body,
+    response_content,
+)
 from sweepreader.store.models import Group
 
 if TYPE_CHECKING:
@@ -113,12 +121,7 @@ def _post(prompt: str, config: "AppConfig", api_key: str) -> dict | None:
                     "User-Agent": _USER_AGENT,
                     "Content-Type": "application/json",
                 },
-                json={
-                    "model": config.model,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.1,
-                    "max_tokens": 4096,
-                },
+                json=request_body(config.model, prompt, max_tokens=4096),
                 timeout=60.0,
             )
             if resp.status_code == 429:
@@ -126,11 +129,21 @@ def _post(prompt: str, config: "AppConfig", api_key: str) -> dict | None:
                 logger.warning("group adjudication rate limited; sleeping %.1fs", delay)
                 time.sleep(delay)
                 continue
+            if resp.status_code in _FATAL_STATUSES:
+                logger.warning("group adjudication refused: HTTP %d: %s", resp.status_code, refusal_message(resp))
+                return None
             resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"].get("content")
+            content, finish = response_content(resp.json(), f"group adjudication attempt {attempt + 1}")
             if content is None:
+                if finish == "length":
+                    return None
                 continue
             return _extract_json(content)
+        except httpx.HTTPStatusError as e:
+            logger.warning("group adjudication call failed (attempt %d): HTTP %d: %s",
+                           attempt + 1, e.response.status_code, refusal_message(e.response))
+            if attempt < 2:
+                time.sleep(2 ** attempt)
         except Exception as e:
             logger.warning("group adjudication call failed (attempt %d): %s", attempt + 1, e)
             if attempt < 2:

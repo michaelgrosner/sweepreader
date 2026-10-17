@@ -157,3 +157,56 @@ def test_non_english_response_is_rejected():
     assert _validate_response(ok) is True
     cjk = dict(ok, summary="NYSE Arca宣布自2026年12月6日起延长交易时间至23小时。")
     assert _validate_response(cjk) is False
+
+
+def _raw_response(body: dict, status: int = 200):
+    resp = MagicMock()
+    resp.status_code = status
+    resp.raise_for_status = MagicMock()
+    resp.json.return_value = body
+    return resp
+
+
+def test_request_disables_reasoning():
+    """Left on, DeepSeek v4 flash spent the whole max_tokens budget reasoning and
+    returned null content. The request must turn it off and refuse providers
+    that would ignore the setting."""
+    payload = {"relevance": 85, "tier": "A", "venues": ["CBOE"], "rationale": "r"}
+    with patch("sweepreader.classify.classifier.httpx.post",
+               return_value=mock_openrouter_response(payload)) as post:
+        OpenRouterClient(api_key="test-key").classify(make_item(), make_config())
+    body = post.call_args.kwargs["json"]
+    assert body["reasoning"] == {"enabled": False}
+    assert body["provider"] == {"require_parameters": True}
+
+
+def test_null_content_at_length_cap_is_not_retried(caplog):
+    truncated = _raw_response({
+        "choices": [{"message": {"content": None}, "finish_reason": "length"}],
+        "usage": {"completion_tokens": 2048, "cost": 0.0006,
+                  "completion_tokens_details": {"reasoning_tokens": 2048}},
+    })
+    client = OpenRouterClient(api_key="test-key")
+    with patch("sweepreader.classify.classifier.httpx.post", return_value=truncated) as post:
+        cls = client.classify(make_item(), make_config())
+
+    assert cls.unclassified is True
+    assert post.call_count == 1
+    assert "finish_reason=length" in caplog.text and "reasoning_tokens=2048" in caplog.text
+    assert client.stats()["fell_back"] == 1
+    assert client.stats()["cost_usd"] == 0.0006
+
+
+def test_refused_key_halts_the_run():
+    """A spend-cap 403 holds for every later item too; stop calling instead of
+    retrying each one three times."""
+    refused = _raw_response({"error": {"message": "Key limit exceeded"}}, status=403)
+    client = OpenRouterClient(api_key="test-key")
+    with patch("sweepreader.classify.classifier.httpx.post", return_value=refused) as post:
+        first = client.classify(make_item(), make_config())
+        second = client.classify(make_item(), make_config())
+
+    assert first.unclassified and second.unclassified
+    assert post.call_count == 1
+    assert client.stats() == {"classified": 0, "fell_back": 2, "cost_usd": 0.0,
+                              "halted": "HTTP 403: Key limit exceeded"}

@@ -223,6 +223,15 @@ def cmd_run(args) -> int:
 
     _build_and_store_groups(store, config, now, dry_run=args.dry_run)
 
+    # One line per run instead of one per failed item; the workflow's "Flag
+    # failures" step reads it back from state.json to annotate the run.
+    llm_stats = llm.stats() if llm is not None else {
+        "classified": 0, "fell_back": 0, "cost_usd": 0.0, "halted": "OPENROUTER_API_KEY not set"}
+    logger.info("llm: %d classified, %d keyword fallback, $%.4f spent%s",
+                llm_stats["classified"], llm_stats["fell_back"], llm_stats["cost_usd"],
+                f", halted ({llm_stats['halted']})" if llm_stats["halted"] else "")
+    state.set("llm_last_run", llm_stats)
+
     state.set("failures_this_run", failures)
     state.set("source_health", per_source_health)
 

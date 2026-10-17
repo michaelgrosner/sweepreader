@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timezone
@@ -23,6 +24,57 @@ logger = logging.getLogger(__name__)
 
 _OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 _USER_AGENT = "SweepReader/0.1"
+
+# Statuses that mean the key itself is unusable for the rest of the run: the
+# daily spend cap (403), no credit (402), a revoked key (401). Retrying them per
+# item only repeats the refusal — one run logged 326 of them in its last minute.
+_FATAL_STATUSES = frozenset({401, 402, 403})
+
+
+def request_body(model: str, prompt: str, *, max_tokens: int) -> dict:
+    """The chat-completions payload shared by classification and group adjudication."""
+    return {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.1,
+        "max_tokens": max_tokens,
+        # DeepSeek v4 flash reasons before it answers, and the reasoning counts
+        # against max_tokens. On title-only notices it deliberated to the cap and
+        # returned finish_reason "length" with null content — billed in full, and
+        # a retry of the same prompt hit the cap again. This is extraction against
+        # a fixed rubric: with reasoning off it answers in ~100-250 tokens, and
+        # tiers matched the stored reasoning-on classifications 22 times in 24.
+        "reasoning": {"enabled": False},
+        # Route only to providers that honour every parameter above; one that
+        # silently ignored `reasoning` would bring the null responses back.
+        "provider": {"require_parameters": True},
+    }
+
+
+def response_content(body: dict, what: str) -> tuple[str | None, str | None]:
+    """(content, finish_reason). Logs the reason when content is missing — a bare
+    "null content" told us nothing, and the cause sat in fields we threw away."""
+    choice = (body.get("choices") or [{}])[0]
+    content = (choice.get("message") or {}).get("content")
+    finish = choice.get("finish_reason")
+    if content is None:
+        usage = body.get("usage") or {}
+        logger.warning(
+            "%s: null content (finish_reason=%s, completion_tokens=%s, reasoning_tokens=%s, provider=%s)",
+            what, finish, usage.get("completion_tokens"),
+            (usage.get("completion_tokens_details") or {}).get("reasoning_tokens"),
+            body.get("provider"),
+        )
+    return content, finish
+
+
+def refusal_message(resp: httpx.Response) -> str:
+    """OpenRouter's own one-line reason for an error status, without httpx's
+    multi-line exception text."""
+    try:
+        return str(resp.json()["error"]["message"])
+    except Exception:
+        return resp.reason_phrase
 
 _CLASSIFY_SCHEMA = {
     "type": "object",
@@ -237,10 +289,36 @@ class OpenRouterClient(LlmClient):
         self._api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
         if not self._api_key:
             raise ValueError("OPENROUTER_API_KEY not set")
+        self._lock = threading.Lock()
+        # Set once the key is refused (see _FATAL_STATUSES); every later item goes
+        # straight to the keyword fallback and is backfilled on a later run.
+        self.halted: str | None = None
+        self.classified = 0
+        self.fell_back = 0
+        self.cost = 0.0
+
+    def stats(self) -> dict:
+        return {"classified": self.classified, "fell_back": self.fell_back,
+                "cost_usd": round(self.cost, 6), "halted": self.halted}
+
+    def _halt(self, resp: httpx.Response) -> None:
+        with self._lock:
+            if self.halted is not None:
+                return
+            self.halted = f"HTTP {resp.status_code}: {refusal_message(resp)}"
+        logger.error("OpenRouter refused the key (%s); keyword fallback for the rest of this run",
+                     self.halted)
+
+    def _fallback(self, item: "Item", config: "AppConfig", config_hash: str) -> Classification:
+        with self._lock:
+            self.fell_back += 1
+        return keyword_fallback(item, config.model, config_hash)
 
     def classify(self, item: "Item", config: "AppConfig") -> Classification:
-        prompt = _build_prompt(item, config, config.suppress_threshold)
         config_hash = config.config_hash()
+        if self.halted is not None:
+            return self._fallback(item, config, config_hash)
+        prompt = _build_prompt(item, config, config.suppress_threshold)
 
         for attempt in range(3):
             try:
@@ -251,14 +329,9 @@ class OpenRouterClient(LlmClient):
                         "User-Agent": _USER_AGENT,
                         "Content-Type": "application/json",
                     },
-                    json={
-                        "model": config.model,
-                        "messages": [{"role": "user", "content": prompt}],
-                        "temperature": 0.1,
-                        # Summary guidance produces longer output; 1024 truncated
-                        # the JSON mid-object and lost items to the fallback.
-                        "max_tokens": 2048,
-                    },
+                    # Summary guidance produces longer output; 1024 truncated
+                    # the JSON mid-object and lost items to the fallback.
+                    json=request_body(config.model, prompt, max_tokens=2048),
                     timeout=60.0,
                 )
                 if resp.status_code == 429:
@@ -266,13 +339,22 @@ class OpenRouterClient(LlmClient):
                     logger.warning("Rate limited; sleeping %.1fs (attempt %d)", retry_after, attempt + 1)
                     time.sleep(retry_after)
                     continue
+                if resp.status_code in _FATAL_STATUSES:
+                    self._halt(resp)
+                    return self._fallback(item, config, config_hash)
                 resp.raise_for_status()
-                content = resp.json()["choices"][0]["message"].get("content")
+                body = resp.json()
+                with self._lock:
+                    self.cost += float((body.get("usage") or {}).get("cost") or 0.0)
+                content, finish = response_content(body, f"item {item.id} attempt {attempt + 1}")
                 if content is None:
-                    logger.warning("LLM returned null content on attempt %d for item %s", attempt + 1, item.id)
+                    if finish == "length":
+                        break  # the same prompt truncates the same way; don't pay for it twice more
                     continue
                 data = _extract_json(content)
                 if data and _validate_response(data, item):
+                    with self._lock:
+                        self.classified += 1
                     return Classification(
                         item_id=item.id,
                         model=config.model,
@@ -290,10 +372,15 @@ class OpenRouterClient(LlmClient):
                     )
                 logger.warning("LLM returned invalid JSON on attempt %d for item %s: %.120r",
                                attempt + 1, item.id, content)
+            except httpx.HTTPStatusError as e:
+                logger.warning("LLM call failed on attempt %d for item %s: HTTP %d: %s",
+                               attempt + 1, item.id, e.response.status_code, refusal_message(e.response))
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
             except Exception as e:
                 logger.warning("LLM call failed on attempt %d for item %s: %s", attempt + 1, item.id, e)
                 if attempt < 2:
                     time.sleep(2 ** attempt)
 
         logger.error("LLM classification failed after retries for item %s, using keyword fallback", item.id)
-        return keyword_fallback(item, config.model, config_hash)
+        return self._fallback(item, config, config_hash)

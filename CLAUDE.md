@@ -49,6 +49,15 @@ forces a full re-run against the LLM. Think before adding a field. Note that the
 prompt built in `classify/classifier.py` is *not* covered by the hash — only
 `profile_prompt` from `config.yaml` is.
 
+Both LLM call sites build their payload with `request_body()` in
+`classify/classifier.py`, which turns model reasoning **off**. DeepSeek v4 flash
+with reasoning on spent the whole `max_tokens` budget thinking and returned null
+content (`finish_reason: length`) on most title-only notices — still billed. When
+changing models, probe a few items and check `finish_reason` and
+`reasoning_tokens` in the raw response, not just whether JSON came back. Each run
+logs one `llm: N classified, M keyword fallback, $X spent` line, and the deploy
+workflow fails the job if the key was refused (`llm_last_run.halted`).
+
 `data/classifications/*.jsonl` is append-only (see `store.append_classification`).
 Rewriting it in place is acceptable only for a deliberate one-time migration.
 
