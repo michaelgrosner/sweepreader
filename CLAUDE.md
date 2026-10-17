@@ -58,6 +58,13 @@ changing models, probe a few items and check `finish_reason` and
 logs one `llm: N classified, M keyword fallback, $X spent` line, and the deploy
 workflow fails the job if the key was refused (`llm_last_run.halted`).
 
+To evaluate a model change, use `python -m sweepreader compare-models` (see the
+module docstring in `cli/compare_models.py`). It generates with the production
+prompt via OpenRouter and judges blind with Claude through the `claude` CLI, so
+the judge runs on the Claude Code subscription; runs live in `.cache/model-eval/`.
+A model that needs an entry in `_MODEL_OVERRIDES` there to answer at all needs
+the same change in `request_body()` before it can go into `config.yaml`.
+
 `data/classifications/*.jsonl` is append-only (see `store.append_classification`).
 Rewriting it in place is acceptable only for a deliberate one-time migration.
 
