@@ -142,8 +142,11 @@ Write all output in English.
 Summary style: lead with the substance — which rule, field, message type, order
 type, symbol set or session changes, and the dates that matter. Omit generic
 closers ("engineers should update their systems", "warrants review"); the reader
-knows why they subscribed. If the text is only a title with no detail, write one
-short factual sentence from what is there rather than padding.
+knows why they subscribed. Never state what the text does not contain ("no
+details are provided", "the notice does not specify dates") — the text you see
+may be an excerpt, so absence in it says nothing about the filing. If you cannot
+say anything beyond what the title already says, return null for summary rather
+than restating the title.
 
 Classify the item below:
 Title: {item.title}
