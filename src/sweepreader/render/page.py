@@ -424,7 +424,10 @@ def render_page(
 
     visible, suppressed = rank_items(items, classifications, config, now)
 
-    groups = store.groups_as_of(now, since=cutoff) if config.grouping_enabled else {}
+    # Same window as the deadline lookback above, not trailing_days: an older
+    # cross-posted notice pulled in for its deadline must arrive with its group,
+    # or the rail lists one row per feed.
+    groups = store.groups_as_of(now, since=max_age_cutoff) if config.grouping_enabled else {}
     cards, suppressed_cards = _collapse(visible, suppressed, groups, items, classifications, today=today)
 
     new_today = [c for c in cards if _is_today(c.item.published_at, now)]

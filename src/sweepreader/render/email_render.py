@@ -60,15 +60,16 @@ def render_email(
     visible, suppressed = rank_items(delta_items, delta_cls, config, now)
 
     # Collapse cross-posts to one line, same as the page (GROUPING.md §3.4).
-    groups = store.groups_as_of(now, since=now - timedelta(days=config.trailing_days)) \
-        if config.grouping_enabled else {}
+    # Loaded over the deadline lookback, not trailing_days, so older notices
+    # pulled into the rail below still collapse with their siblings.
+    max_age_cutoff = now - timedelta(days=config.max_age_days)
+    groups = store.groups_as_of(now, since=max_age_cutoff) if config.grouping_enabled else {}
     cards, suppressed_cards = _collapse(visible, suppressed, groups, delta_items, delta_cls, today=today)
 
     top_items = [c for c in cards if c.cls.tier in ("A", "B")]
     also_items = [c for c in cards if c.cls.tier not in ("A", "B")]
 
     # Deadlines for email rail: <= 14d, looking back up to max_age_days
-    max_age_cutoff = now - timedelta(days=config.max_age_days)
     extended_cls = store.classifications_as_of(now, config_hash=config.config_hash(), since=max_age_cutoff)
     rail_start = today - timedelta(days=1)
     rail_end = today + timedelta(days=14)

@@ -523,3 +523,46 @@ def test_suppressed_item_with_a_date_stays_out_of_the_rail(tmp_path, monkeypatch
     assert "Trio-Tech" not in rail
     # Still on the page, in the suppressed list.
     assert "Trio-Tech" in html
+
+
+def test_rail_collapses_a_group_older_than_trailing_days(tmp_path, monkeypatch):
+    """A cross-posted notice outside trailing_days still collapses in the rail.
+
+    The rail pulls items in from up to max_age_days back for their deadlines,
+    but groups were only loaded over trailing_days — and from that month's shard
+    only — so an old Cboe spec carried by three tech feeds rendered three rows.
+    """
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(page_mod, "_DOCS_DIR", docs_dir)
+
+    store = Store(tmp_path / "data")
+    state = StateStore(tmp_path / "data")
+    config = make_config()
+    today = FIXTURE_NOW.date()
+    # Previous month's shard, well outside the 14-day trailing window.
+    pub = FIXTURE_NOW - timedelta(days=30)
+
+    member_ids = []
+    for n in range(3):
+        item = make_item(f"spec_{n}", published_at=pub,
+                         title="Cboe Titanium Futures Timestamping Service Specification")
+        store.append_item(item)
+        store.append_classification(Classification(
+            item_id=item.id, model=config.model, config_hash=config.config_hash(),
+            classified_at=pub, relevance=85, tier="A", rationale="r", summary="s",
+            deadline_date=today + timedelta(days=20), deadline_kind="cutover",
+        ))
+        member_ids.append(item.id)
+    store.append_group(Group(
+        group_id=Group.make_id(member_ids), member_ids=member_ids,
+        canonical_id=member_ids[0], decided_at=pub,
+    ))
+
+    render_page(config, store, state, now=FIXTURE_NOW)
+    html = (docs_dir / "index.html").read_text()
+    rail = html.split('id="deadline-rail"')[1].split("</section>")[0]
+
+    assert rail.count('class="deadline-row') == 1
+    assert "3 notices" in rail
+
