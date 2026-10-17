@@ -68,6 +68,12 @@ def test_parser_api_used_by_the_adapters():
     art = tree.css_first("article.circulars")
     assert isinstance(art, Node)
     assert "notice_category-weekend-testing" in (art.attributes.get("class") or "")
-    assert art.css_first("header").text(deep=False).strip() == "Title"
     assert [s.text() for s in art.css("header div span")] == ["2026-059"]
-    assert art.css_first("footer a").attributes.get("href") == "/assets/x.pdf"
+
+    header = art.css_first("header")
+    assert header is not None
+    assert header.text(deep=False).strip() == "Title"
+
+    link = art.css_first("footer a")
+    assert link is not None
+    assert link.attributes.get("href") == "/assets/x.pdf"
