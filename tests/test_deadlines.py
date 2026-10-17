@@ -566,3 +566,12 @@ def test_rail_collapses_a_group_older_than_trailing_days(tmp_path, monkeypatch):
     assert rail.count('class="deadline-row') == 1
     assert "3 notices" in rail
 
+
+def test_short_venue_compacts_slash_joined_markets():
+    from sweepreader.render.page import short_venue
+
+    assert short_venue("CBOE") == "CBOE"
+    assert short_venue("Finra/NYSE Trf") == "Finra/NYSE Trf"
+    assert short_venue(
+        "NYSE / NYSE American Equities / NYSE Arca Equities / Finra/NYSE Trf"
+    ) == "NYSE +3"

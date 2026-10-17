@@ -238,6 +238,20 @@ def _collapse(
     return cards, sup_cards
 
 
+def short_venue(venue: str) -> str:
+    """Compact venue label for one-line rows.
+
+    NYSE slash-joins every market a notice went to ("NYSE / NYSE American
+    Equities / ... / NYSE Texas"); in the rail that string is wider than the
+    row and pushes the title out. Show the first market and a count instead.
+    Splits on " / " only, so "Finra/NYSE Trf" stays one market.
+    """
+    parts = [p for p in (s.strip() for s in venue.split(" / ")) if p]
+    if len(parts) <= 1:
+        return venue
+    return f"{parts[0]} +{len(parts) - 1}"
+
+
 def build_deadline_rail(
     cards: list["Card"],
     today: date,
@@ -276,6 +290,7 @@ def _env() -> Environment:
         autoescape=select_autoescape(["html"]),
     )
     env.filters["tier_color"] = lambda t: _TIER_COLORS.get(t, "#9CA3AF")
+    env.filters["short_venue"] = short_venue
     env.filters["score_pct"] = lambda s: min(100, int(s))
     env.filters["tier_meter_fill"] = lambda score, tier: (
         f'<div class="tier-meter-fill" style="height: {min(100, int(score))}%; '

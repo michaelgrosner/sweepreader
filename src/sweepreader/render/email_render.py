@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from sweepreader.render.page import _collapse, build_deadline_rail
+from sweepreader.render.page import _collapse, build_deadline_rail, short_venue
 from sweepreader.score import rank_items
 
 if TYPE_CHECKING:
@@ -98,6 +98,7 @@ def render_email(
         autoescape=select_autoescape(["html"]),
     )
     env.filters["tier_color"] = lambda t: _TIER_COLORS.get(t, "#9CA3AF")
+    env.filters["short_venue"] = short_venue
     env.filters["tier_meter_fill"] = lambda cls: (
         f'<div style="position:absolute;bottom:0;left:0;right:0;'
         f'height:{cls.relevance}%;background:{_TIER_COLORS.get(cls.tier, "#9CA3AF")};'
