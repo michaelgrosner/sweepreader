@@ -1,4 +1,4 @@
-model: "~deepseek/deepseek-v4-flash-latest"
+model: "deepseek/deepseek-v4.1-flash"
 suppress_threshold: 35
 trailing_days: 14
 grouping:
