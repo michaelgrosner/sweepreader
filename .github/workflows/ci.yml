@@ -7,12 +7,15 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Pinned for the same reason as requirements.lock: ubuntu-latest moves to a
+    # new image on GitHub's schedule (Ubuntu 26, from 2026-10-19), which can drop
+    # a prebuilt Python or change system libs under a run no one touched.
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -22,7 +25,7 @@ jobs:
         # the editable install from resolving anything behind it. Regenerate with
         # the uv command in the lockfile header.
         run: |
-          pip install -r requirements.lock
+          pip install --progress-bar off -r requirements.lock
           pip install -e . --no-deps
 
       - name: Lint (ruff)

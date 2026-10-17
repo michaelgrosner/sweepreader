@@ -16,17 +16,20 @@ concurrency:
 
 jobs:
   rebuild:
-    runs-on: ubuntu-latest
+    # Pinned for the same reason as requirements.lock: ubuntu-latest moves to a
+    # new image on GitHub's schedule (Ubuntu 26, from 2026-10-19), which can drop
+    # a prebuilt Python or change system libs under a run no one touched.
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -36,7 +39,7 @@ jobs:
         # the editable install from resolving anything behind it. Regenerate with
         # the uv command in the lockfile header.
         run: |
-          pip install -r requirements.lock
+          pip install --progress-bar off -r requirements.lock
           pip install -e . --no-deps
 
       - name: Run pipeline
@@ -54,13 +57,13 @@ jobs:
           git push || true
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: docs/
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       - name: Flag failures
         if: always()
@@ -73,6 +76,14 @@ jobs:
               errors = sum(1 for src in health.values() if src.get('status') == 'error')
               if errors > 0:
                   print(f'::warning::{errors} source(s) failed with critical errors this run')
+              # A refused key (spend cap, no credit) or null responses used to
+              # surface only as keyword-fallback cards on the page, for days.
+              llm = state.get('llm_last_run') or {}
+              if llm.get('halted'):
+                  print(f\"::error::LLM classification halted: {llm['halted']}\")
+              elif llm.get('fell_back'):
+                  print(f\"::warning::{llm['fell_back']} item(s) fell back to keyword classification\")
+              if errors > 0 or llm.get('halted'):
                   sys.exit(1)
           except FileNotFoundError:
               pass
