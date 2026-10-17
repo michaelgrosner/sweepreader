@@ -10,7 +10,18 @@ Step-by-step from zero to a running automated digest.
 - Python 3.12+ available
 - A Google account for the dedicated mailbox — needed to **send** the daily digest (SMTP) and to receive the remaining email-only venue (24X). MIAX, NYSE, BOX, and IEX no longer need email; they're scraped/API-fetched automatically.
 
-Dependencies install from `requirements.txt` (`httpx`, `feedparser`, `PyYAML`, `Jinja2`, `selectolax`, `pypdf`). All ship prebuilt wheels, so no compiler is required.
+Dependencies install from `requirements.lock` — fully pinned and hash-checked
+(`httpx`, `feedparser`, `PyYAML`, `Jinja2`, `selectolax`, `pypdf`, plus the dev
+tools). All ship prebuilt wheels, so no compiler is required:
+
+```bash
+pip install -r requirements.lock
+pip install -e . --no-deps
+```
+
+`pyproject.toml` holds the loose version ranges; the lockfile is what actually
+gets installed, locally and in CI. Regenerate it with the `uv pip compile`
+command recorded in its own header — do not hand-edit it.
 
 ---
 

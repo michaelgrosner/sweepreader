@@ -52,6 +52,26 @@ prompt built in `classify/classifier.py` is *not* covered by the hash — only
 `data/classifications/*.jsonl` is append-only (see `store.append_classification`).
 Rewriting it in place is acceptable only for a deliberate one-time migration.
 
+## Dependencies
+
+`requirements.lock` is the installed set — fully pinned, hash-checked, and
+resolved for Python 3.12 across platforms. Both CI and local installs use it:
+
+```
+pip install -r requirements.lock
+pip install -e . --no-deps
+```
+
+`pyproject.toml` keeps the loose ranges and is the file you edit to add or move
+a dependency; the lock is generated, never hand-edited. Regenerate with the
+`uv pip compile` command recorded in the lockfile's own header, then run ruff,
+mypy and pytest against the new set before committing — a bump can break the
+build on its own (selectolax 1.0 deleted the `modest` backend and took every
+scheduled run down for two weeks, which is why this file exists).
+
+Floor-only pins are what allowed that: a scheduled run resolved fresh versions
+every three hours, so a release upstream broke a build no one had touched.
+
 ## Static analysis
 
 CI runs ruff and mypy before the tests; all three must pass. Run them locally

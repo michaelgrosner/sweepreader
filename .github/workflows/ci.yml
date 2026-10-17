@@ -17,7 +17,13 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        # requirements.lock is fully pinned and hash-checked, so a new release
+        # upstream can never land in a scheduled run on its own; --no-deps keeps
+        # the editable install from resolving anything behind it. Regenerate with
+        # the uv command in the lockfile header.
+        run: |
+          pip install -r requirements.lock
+          pip install -e . --no-deps
 
       - name: Lint (ruff)
         run: python -m ruff check
