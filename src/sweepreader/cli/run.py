@@ -152,6 +152,15 @@ def cmd_run(args) -> int:
         )
         return entry
 
+    # Items the LLM has already classified under this config: an adapter that
+    # fetches per-item detail can skip them (see BaseAdapter._is_settled).
+    settled = {
+        item_id for item_id, cls in store.classifications_as_of(
+            now_for_sources, config_hash=config_hash,
+            since=config.max_age_cutoff(now_for_sources)).items()
+        if not cls.unclassified
+    }
+
     all_new_items = []
     for source in config.sources:
         inactive = inactive_health(source, now_for_sources)
@@ -160,7 +169,7 @@ def cmd_run(args) -> int:
             logger.info("source=%s not fetched (status=%s until=%s)", source.id,
                         inactive["status"], inactive.get("disabled_until") or "-")
             continue
-        items, warning, err = fetch_source(source, state)
+        items, warning, err = fetch_source(source, state, is_settled=settled.__contains__)
         if err:
             failures += 1
             per_source_health[source.id] = _health(source.id, {"status": "error", "error": str(err)})

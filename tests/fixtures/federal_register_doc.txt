@@ -1,0 +1,82 @@
+<html>
+<head>
+<title>Federal Register, Volume 91 Issue 200 (Monday, October 19, 2026)</title>
+</head>
+<body><pre>
+[Federal Register Volume 91, Number 200 (Monday, October 19, 2026)]
+[Notices]
+[Pages 66187-66191]
+From the Federal Register Online via the Government Publishing Office [<a href="http://www.gpo.gov">www.gpo.gov</a>]
+[FR Doc No: 2026-21247]
+
+
+-----------------------------------------------------------------------
+
+SECURITIES AND EXCHANGE COMMISSION
+
+[Release No. 34-106666; File No. SR-PHLX-2026-61]
+
+
+Self-Regulatory Organizations; Nasdaq PHLX LLC; Notice of Filing 
+and Immediate Effectiveness of Proposed Rule Change To Amend the PHLX 
+Pricing Schedule at Options 7, Section 4 (Multiply Listed Options Fees)
+
+October 14, 2026.
+    Pursuant to Section 19(b)(1) of the Securities Exchange Act of 1934 
+(``Act''),\1\ and Rule 19b-4 thereunder,\2\ notice is hereby given that 
+on October 1, 2026, Nasdaq PHLX LLC (``PHLX'' or ``Exchange'') filed 
+with the Securities and Exchange Commission (``SEC'' or ``Commission'') 
+the proposed rule change as described in Items I, II, and III, below, 
+which Items have been prepared by the Exchange. The Commission is 
+publishing this notice to solicit comments on the proposed rule change 
+from interested persons.
+---------------------------------------------------------------------------
+
+    \1\ 15 U.S.C. 78s(b)(1).
+    \2\ 17 CFR 240.19b-4.
+---------------------------------------------------------------------------
+
+I. Self-Regulatory Organization's Statement of the Terms of Substance 
+of the Proposed Rule Change
+
+    The Exchange proposes to amend the PHLX Pricing Schedule at Options 
+7, Section 4 (Multiply Listed Options Fees).
+    The text of the proposed rule change is available on the Exchange's 
+website at <a href="https://listingcenter.nasdaq.com/rulebook/phlx/rulefilings">https://listingcenter.nasdaq.com/rulebook/phlx/rulefilings</a>, 
+and at the principal office of the Exchange.
+
+II. Self-Regulatory Organization's Statement of the Purpose of, and 
+Statutory Basis for, the Proposed Rule Change
+
+    In its filing with the Commission, the Exchange included statements 
+concerning the purpose of and basis for the proposed rule change and 
+discussed any comments it received on the proposed rule change. The 
+text of these statements may be examined at the places specified in 
+Item IV below. The Exchange has prepared summaries, set forth in 
+sections A, B, and C below, of the most significant aspects of such 
+statements.
+
+A. Self-Regulatory Organization's Statement of the Purpose of, and 
+Statutory Basis for, the Proposed Rule Change
+
+1. Purpose
+    PHLX proposes to amend its Pricing Schedule at Options 7, Section 4 
+(Multiply Listed Options Fees).
+Options 7, Section 4 (Multiply Listed Options Fees)
+    Currently, the Exchange offers a Floor Transaction (Open Outcry) 
+\3\ Floor Broker Incentive Program (``Program''). Under the Program, 
+the following transactions are not considered qualifying volume: (1) 
+dividend, merger, short stock interest, reversal and conversion, jelly 
+roll, and box spread strategy executions as defined in Options 7, 
+Section 4; (2) Firm \4\ Floor Options Transactions for members 
+executing facilitation orders \5\ pursuant to Options 8, Section 30 
+when such members are trading in their own proprietary account 
+(including Cabinet Options Transaction Charges); and (3) Customer \6\-
+to-Customer transactions.
+---------------------------------------------------------------------------
+
+    \3\ The term ``floor transaction'' is a transaction that is 
+effected in open outcry on the Exchange's Trading Floor. See Options 
+7, Section 1(c).
+</pre></body>
+</html>

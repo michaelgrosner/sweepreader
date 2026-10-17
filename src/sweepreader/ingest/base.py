@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from sweepreader.config import SourceConfig
@@ -21,11 +21,18 @@ class BaseAdapter(ABC):
         source: "SourceConfig",
         state: "StateStore | None" = None,
         now: "datetime | None" = None,
+        *,
+        is_settled: Callable[[str], bool] | None = None,
     ):
         self.source = source
         self.state = state
         self.warning: str | None = None
         self._now = now
+        # True for an item id that already has an LLM classification. Adapters
+        # that fetch a per-item detail page use it to skip the request: the
+        # stored text is never replaced and the classification is cached, so the
+        # body would change nothing.
+        self._is_settled = is_settled or (lambda _item_id: False)
 
     def _clock(self) -> "datetime":
         """Current time, or the pinned value injected for tests. Adapters must
@@ -42,9 +49,11 @@ def fetch_source(
     source: "SourceConfig",
     state: "StateStore | None" = None,
     now: "datetime | None" = None,
+    *,
+    is_settled: Callable[[str], bool] | None = None,
 ) -> tuple[list["Item"], str | None, Exception | None]:
     try:
-        adapter = _get_adapter(source, state, now)
+        adapter = _get_adapter(source, state, now, is_settled=is_settled)
         items = adapter.fetch()
         warning = getattr(adapter, "warning", None)
         logger.info("source=%s fetched %d items", source.id, len(items))
@@ -58,10 +67,12 @@ def _get_adapter(
     source: "SourceConfig",
     state: "StateStore | None" = None,
     now: "datetime | None" = None,
+    *,
+    is_settled: Callable[[str], bool] | None = None,
 ) -> BaseAdapter:
     if source.parse == "federal_register":
         from sweepreader.ingest.federal_register import FederalRegisterAdapter
-        return FederalRegisterAdapter(source, state, now)
+        return FederalRegisterAdapter(source, state, now, is_settled=is_settled)
     elif source.parse == "rss_generic":
         from sweepreader.ingest.rss import RssAdapter
         return RssAdapter(source, state, now)

@@ -9,6 +9,7 @@ from typing import Iterator
 import httpx
 
 from sweepreader.ingest.base import _USER_AGENT, BaseAdapter
+from sweepreader.ingest.html_text import HTMLParser
 from sweepreader.store.models import Item
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,38 @@ _VENUE_PATTERNS: list[tuple[re.Pattern[str], str | None]] = [
 
 _FILING_RE = re.compile(r'SR-([A-Z]+)-\d{4}-\d+')
 
+# The API's `abstract` is empty on almost every SRO notice (1 in 40 sampled), so
+# without the document body the classifier saw only the title — and padded its
+# summaries with claims about what "the notice" lacked. The body is ~30 KB (up to
+# ~300 KB for an approval order) of which the substance is the filer's own
+# "1. Purpose" section; notices without one (orders, proceedings) open with
+# "I. Introduction". Everything before either is fixed Exchange Act boilerplate.
+_BODY_CHARS = 6000
+_BODY_STARTS = [
+    re.compile(r"^\s*1\.\s+Purpose\s*$", re.M),
+    re.compile(r"^\s*I\.\s+Introduction\s*$", re.M),
+]
+# A footnote block: a rule of dashes, then lines beginning with a \N\ marker,
+# then another rule. Footnotes are citations, never substance.
+_FOOTNOTE_BLOCK = re.compile(r"-{20,}\n\s*\\\d+\\.*?-{20,}\n", re.S)
+_INLINE_NOISE = re.compile(r"\\\d+\\|\[\[Page \d+\]\]")
+
+
+def _body_text(page: str) -> str:
+    """The substantive part of a Federal Register plain-text document
+    (`raw_text_url`, which is a <pre> block), whitespace-collapsed and capped."""
+    pre = HTMLParser(page).css_first("pre")
+    text = pre.text(deep=True) if pre is not None else page
+    text = text.replace("\r", "")
+    text = _FOOTNOTE_BLOCK.sub("", text)
+    for start in _BODY_STARTS:
+        m = start.search(text)
+        if m:
+            text = text[m.start():]
+            break
+    text = _INLINE_NOISE.sub("", text)
+    return " ".join(text.split())[:_BODY_CHARS]
+
 
 def _extract_venue(title: str, filing_number: str | None) -> str:
     if filing_number:
@@ -56,11 +89,12 @@ def _doc_published_at(doc: dict) -> datetime | None:
         return None
 
 
-def _doc_to_item(doc: dict, source_id: str, *, first_seen_at: datetime) -> Item:
+def _doc_to_item(doc: dict, source_id: str, *, first_seen_at: datetime, body: str = "") -> Item:
     url = doc.get("html_url", "")
     filing_no = doc.get("document_number", "")
     title = doc.get("title", "").strip()
     abstract = doc.get("abstract") or ""
+    text = "\n\n".join(part for part in (title, abstract, body) if part)
     stable_key = filing_no or url
     return Item(
         id=Item.make_id(source_id, stable_key),
@@ -70,7 +104,7 @@ def _doc_to_item(doc: dict, source_id: str, *, first_seen_at: datetime) -> Item:
         url=url,
         published_at=_doc_published_at(doc) or first_seen_at,
         first_seen_at=first_seen_at,
-        raw_text=f"{title}\n\n{abstract}"[:8000],
+        raw_text=text[:8000],
         modality="api",
         cluster_id=filing_no or None,
     )
@@ -86,7 +120,7 @@ def _fetch_page(page: int, *, gte_date: str, timeout: float = 30.0, cache=None) 
         "page": str(page),
         "fields[]": [
             "document_number", "title", "html_url", "publication_date",
-            "abstract", "full_text_xml_url", "agencies", "docket_ids",
+            "abstract", "raw_text_url", "agencies", "docket_ids",
         ],
     }
     headers = {"User-Agent": _USER_AGENT, "Accept-Encoding": "gzip"}
@@ -127,13 +161,34 @@ def iter_seed_items(source_id: str, *, stop_before: datetime, cache=None) -> Ite
         yield _doc_to_item(doc, source_id, first_seen_at=_doc_published_at(doc) or stop_before)
 
 
+def _fetch_body(url: str, *, timeout: float = 30.0) -> str:
+    resp = httpx.get(url, headers={"User-Agent": _USER_AGENT, "Accept-Encoding": "gzip"},
+                     timeout=timeout, follow_redirects=True)
+    resp.raise_for_status()
+    return _body_text(resp.text)
+
+
 class FederalRegisterAdapter(BaseAdapter):
     BASE_URL = _BASE_URL
 
     def fetch(self) -> list[Item]:
         now = self._clock()
         cutoff = now - timedelta(days=_LOOKBACK_DAYS)
-        return [
-            _doc_to_item(doc, self.source.id, first_seen_at=now)
-            for doc in iter_documents(stop_before=cutoff, max_pages=_MAX_LIVE_PAGES)
-        ]
+        items: list[Item] = []
+        attempted = failed = 0
+        for doc in iter_documents(stop_before=cutoff, max_pages=_MAX_LIVE_PAGES):
+            item = _doc_to_item(doc, self.source.id, first_seen_at=now)
+            url = doc.get("raw_text_url")
+            # Only items still to be classified need the body. Fetching all ~90
+            # documents in the window every 3 hours would be ~6 MB of waste.
+            if url and not self._is_settled(item.id):
+                attempted += 1
+                try:
+                    item = _doc_to_item(doc, self.source.id, first_seen_at=now, body=_fetch_body(url))
+                except Exception as e:
+                    failed += 1
+                    logger.warning("fed register body fetch failed for %s: %s", doc.get("document_number"), e)
+            items.append(item)
+        if attempted and failed == attempted:
+            self.warning = f"all {failed} document body fetch(es) failed; classifying titles only"
+        return items
