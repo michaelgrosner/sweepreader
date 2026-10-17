@@ -67,7 +67,7 @@ def _parse_date(text: str) -> datetime | None:
 
 def parse_listing(html: str) -> list[dict]:
     """Extract notice rows from the listing HTML."""
-    from selectolax.parser import HTMLParser
+    from sweepreader.ingest.html_text import HTMLParser
 
     tree = HTMLParser(html)
     rows: list[dict] = []

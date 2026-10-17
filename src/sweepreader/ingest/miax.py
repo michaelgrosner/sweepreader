@@ -23,10 +23,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Callable, Iterator
 
 import httpx
-from selectolax.parser import HTMLParser, Node
 
 from sweepreader.ingest.base import _USER_AGENT, BaseAdapter
-from sweepreader.ingest.html_text import html_to_text
+from sweepreader.ingest.html_text import HTMLParser, Node, html_to_text
 from sweepreader.store.models import Item
 
 logger = logging.getLogger(__name__)

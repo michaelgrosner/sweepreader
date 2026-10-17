@@ -22,9 +22,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 import httpx
-from selectolax.parser import HTMLParser
 
 from sweepreader.ingest.base import _USER_AGENT
+from sweepreader.ingest.html_text import HTMLParser
 
 logger = logging.getLogger(__name__)
 

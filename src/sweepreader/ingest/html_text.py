@@ -1,11 +1,21 @@
-"""Shared HTML→text extraction built on selectolax (fast lexbor backend).
+"""Shared HTML parsing and HTML→text extraction built on selectolax.
 
 Used by the scrape/API adapters to turn notice bodies into clean classifier
 input, replacing hand-rolled regex stripping.
+
+The parser types are re-exported from here so there is a single place that names
+a selectolax backend. selectolax 1.0 removed the old `modest` backend
+(`selectolax.parser`) and raises ImportError on import, so every adapter uses
+the `lexbor` backend instead. The API surface we rely on — `css`, `css_first`,
+`text(separator=, deep=)`, `attributes`, `decompose`, `body`, `root` — is
+identical between the two.
 """
 from __future__ import annotations
 
-from selectolax.parser import HTMLParser
+from selectolax.lexbor import LexborHTMLParser as HTMLParser
+from selectolax.lexbor import LexborNode as Node
+
+__all__ = ["HTMLParser", "Node", "html_to_text"]
 
 _DROP = "script, style, svg, noscript, template"
 
