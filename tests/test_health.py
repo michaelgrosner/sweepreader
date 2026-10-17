@@ -95,3 +95,41 @@ def test_unparseable_timestamp_degrades_to_none():
     rows = _rows(_config(_src("a")), {"a": {"status": "ok", "last_ok": "not-a-date"}})
     assert rows["a"].last_ok is None
     assert rows["a"].stale_days is None
+
+
+# --- what the run loop records for a source it does not fetch -----------------
+# (cli.run.inactive_health; the rows above are the render side of the same data)
+
+def test_active_source_has_no_inactive_entry():
+    from sweepreader.cli.run import inactive_health
+    assert inactive_health(_src("a"), FIXTURE_NOW) is None
+
+
+def test_config_disabled_source_is_recorded_off():
+    """Turning a source off must clear the error/warning it left behind, or the
+    page keeps flagging a source we never fetch again."""
+    from sweepreader.cli.run import inactive_health
+    assert inactive_health(_src("a", enabled=False), FIXTURE_NOW) == {"status": "off"}
+
+
+def test_paused_source_is_recorded_disabled_with_its_resume_date():
+    from sweepreader.cli.run import inactive_health
+    entry = inactive_health(_src("a", disabled_until=date(2026, 10, 31)), FIXTURE_NOW)
+    assert entry == {"status": "disabled", "disabled_until": "2026-10-31"}
+
+
+def test_source_past_its_pause_date_is_fetched_again():
+    from sweepreader.cli.run import inactive_health
+    src = _src("a", disabled_until=date(2026, 6, 1))  # before FIXTURE_NOW
+    assert inactive_health(src, FIXTURE_NOW) is None
+
+
+def test_recorded_status_matches_what_the_health_page_renders():
+    """`off` is the same label build_health_rows derives from config, so a
+    config-disabled source reads the same whether or not a run has stamped it."""
+    from sweepreader.cli.run import inactive_health
+    src = _src("a", enabled=False)
+    entry = inactive_health(src, FIXTURE_NOW)
+    assert entry is not None
+    rows = _rows(_config(src), {"a": {**entry, "last_ok": None}})
+    assert rows["a"].status == entry["status"] == "off"

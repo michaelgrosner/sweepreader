@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 from sweepreader.classify.classifier import OpenRouterClient, keyword_fallback
-from sweepreader.config import load_config
+from sweepreader.config import SourceConfig, load_config
 from sweepreader.grouping import build_groups
 from sweepreader.ingest.base import fetch_source
 from sweepreader.ingest.cluster import assign_clusters
@@ -14,6 +14,23 @@ from sweepreader.render import render_health, render_page
 from sweepreader.store import StateStore, Store
 
 logger = logging.getLogger(__name__)
+
+
+def inactive_health(source: SourceConfig, now: datetime) -> dict | None:
+    """The health entry for a source we will not fetch this run, or None if we will.
+
+    Neither case is a failure, but both still have to write health: a stale
+    "error" or "warning" left from before the source went quiet would otherwise
+    keep flagging a source we are deliberately not fetching.
+    """
+    if not source.enabled:
+        return {"status": "off"}  # turned off in config.yaml
+    if not source.is_active(now):
+        return {
+            "status": "disabled",
+            "disabled_until": source.disabled_until.isoformat() if source.disabled_until else None,
+        }
+    return None
 
 
 def _classify_item(item, existing_cls, llm, config, config_hash, dry_run, store):
@@ -137,17 +154,11 @@ def cmd_run(args) -> int:
 
     all_new_items = []
     for source in config.sources:
-        if not source.enabled:
-            continue
-        if not source.is_active(now_for_sources):
-            # A timed-out source is not a failure. Overwrite any stale "error"
-            # health left from before it was disabled, or the alarm would keep
-            # flagging a source we are deliberately not fetching.
-            per_source_health[source.id] = _health(source.id, {
-                "status": "disabled",
-                "disabled_until": source.disabled_until.isoformat() if source.disabled_until else None,
-            })
-            logger.info("source=%s skipped until %s", source.id, source.disabled_until)
+        inactive = inactive_health(source, now_for_sources)
+        if inactive is not None:
+            per_source_health[source.id] = _health(source.id, inactive)
+            logger.info("source=%s not fetched (status=%s until=%s)", source.id,
+                        inactive["status"], inactive.get("disabled_until") or "-")
             continue
         items, warning, err = fetch_source(source, state)
         if err:
